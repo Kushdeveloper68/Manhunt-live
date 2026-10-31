@@ -1,0 +1,32 @@
+export const SOCKET_EVENTS = {
+  // Client to Server
+  GAME_JOIN: 'game:join',
+  GAME_LEAVE: 'game:leave',
+  LOCATION_UPDATE: 'location:update',
+  ROLE_ASSIGN: 'role:assign',
+  ROLE_RANDOMIZE: 'role:randomize',
+  PLAYER_READY: 'player:ready',
+  PLAYER_KICK: 'player:kick',
+  PLAYER_ADD: 'player:add',
+  GAME_START: 'game:start',
+  TAG_ATTEMPT: 'tag:attempt',
+  TAG_CONFIRM: 'tag:confirm',
+  TAG_DISPUTE: 'tag:dispute',
+  SOS_TRIGGER: 'sos:trigger',
+  SOS_RESOLVED: 'sos:resolved',
+
+  // Server to Client
+  GAME_STATE: 'game:state',
+  LOBBY_UPDATE: 'lobby:update',
+  COUNTDOWN_TICK: 'countdown:tick',
+  REVEAL_TICK: 'reveal:tick',
+  ZONE_UPDATE: 'zone:update',
+  ZONE_SHRINKING: 'zone:shrinking',
+  ZONE_VIOLATION: 'zone:violation',
+  PLAYER_TAGGED: 'player:tagged',
+  PLAYER_ELIMINATED: 'player:eliminated',
+  GAME_END: 'game:end',
+  ERROR: 'error',
+} as const;
+
+export type SocketEventName = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];

@@ -1,0 +1,31 @@
+{
+  "name": "@manhunt/server",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test dist/**/*.test.js || tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@manhunt/shared": "*",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.8.0",
+    "socket.io": "^4.8.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.8.7",
+    "socket.io-client": "^4.8.4",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

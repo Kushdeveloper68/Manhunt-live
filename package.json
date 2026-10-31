@@ -1,0 +1,22 @@
+{
+  "name": "manhunt-live-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "app"
+  ],
+  "scripts": {
+    "build:shared": "npm --workspace=shared run build",
+    "build:server": "npm --workspace=server run build",
+    "typecheck": "npm --workspace=shared run typecheck && npm --workspace=server run typecheck && npm --workspace=app run typecheck",
+    "test:server": "npm --workspace=server test",
+    "start:server": "npm --workspace=server run dev",
+    "start:app": "npm --workspace=app start"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}

@@ -42,6 +42,8 @@ export default function LiveMapScreen() {
     dismissExposedAlert,
     zoneViolation,
     matchEnd,
+    pendingTagAttempt,
+    eliminatedData,
   } = useLiveGameStore();
 
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
@@ -60,6 +62,21 @@ export default function LiveMapScreen() {
 
   const isRunner = myRole === 'RUNNER' || myRole === 'UNASSIGNED';
   const roleColor = isRunner ? colors.roleRunner : colors.roleChaser;
+
+  // Route to tag confirmation flow if pending attempt received
+  useEffect(() => {
+    if (pendingTagAttempt && isRunner) {
+      Vibration.vibrate([100, 200, 100, 200]);
+      router.push('/game/tag');
+    }
+  }, [pendingTagAttempt, isRunner]);
+
+  // Route to spectator mode if eliminated
+  useEffect(() => {
+    if (eliminatedData) {
+      router.replace('/game/spectator');
+    }
+  }, [eliminatedData]);
 
   // Start GPS tracking on mount
   useEffect(() => {
@@ -148,10 +165,7 @@ export default function LiveMapScreen() {
 
   function handleTagAction() {
     Vibration.vibrate([40, 60, 100]);
-    Alert.alert('TAG PROTOCOL', 'Enter 4-digit runner code or scan optical QR.', [
-      { text: 'ENTER CODE', onPress: () => {} },
-      { text: 'CANCEL', style: 'cancel' },
-    ]);
+    router.push('/game/tag');
   }
 
   function toggleSheet() {

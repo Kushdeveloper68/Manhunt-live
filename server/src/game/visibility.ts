@@ -22,12 +22,19 @@ export function filterStateForPlayer(
 ): GameStateSync {
   const targetPlayer = state.players.find((p) => p.userId === targetUserId);
   const targetRole: PlayerRole = targetPlayer?.role || 'UNASSIGNED';
+  const isSpectator = targetPlayer?.status === 'ELIMINATED';
 
-  // Extract teammate live locations only
+  // Extract visible live locations
   const visibleTeammateLocations: LivePlayerLocation[] = [];
   for (const [userId, loc] of state.locations.entries()) {
     const locPlayer = state.players.find((p) => p.userId === userId);
     if (!locPlayer) continue;
+
+    // Spectator God-view: see everyone!
+    if (isSpectator) {
+      visibleTeammateLocations.push(loc);
+      continue;
+    }
 
     // Teammate condition: same role, active status
     if (locPlayer.role === targetRole && targetRole !== 'UNASSIGNED') {
@@ -37,8 +44,8 @@ export function filterStateForPlayer(
 
   // Determine runner snapshots visible to this player
   let visibleRunnerSnapshots: RunnerSnapshot[] = [];
-  if (targetRole === 'CHASER') {
-    // Chasers see the periodic snapshots captured at reveal ticks
+  if (targetRole === 'CHASER' || isSpectator) {
+    // Chasers and Spectators see the periodic snapshots captured at reveal ticks
     visibleRunnerSnapshots = [...state.runnerSnapshots];
   } else if (state.settings.revealMode === 'BOTH_WAYS') {
     visibleRunnerSnapshots = [...state.runnerSnapshots];
@@ -59,6 +66,10 @@ export function filterStateForPlayer(
       status: p.status,
       ready: p.ready,
       isHost: p.isHost,
+      // Provide tag code only to the runner themselves
+      tagCode: p.userId === targetUserId ? state.tagCodes.get(p.userId) : undefined,
+      taggedAt: p.taggedAt,
+      taggedBy: p.taggedBy,
     })),
     startedAt: state.startedAt,
     endedAt: state.endedAt,
@@ -73,7 +84,7 @@ export function filterStateForPlayer(
 
 /**
  * Checks whether a live location broadcast from sendingUserId can be delivered to recipientUserId.
- * Returns true ONLY if they are on the same team.
+ * Returns true if on the same team OR recipient is in spectator mode (ELIMINATED).
  */
 export function canReceiveLiveLocation(
   state: LiveGameState,
@@ -86,6 +97,10 @@ export function canReceiveLiveLocation(
   const recipient = state.players.find((p) => p.userId === recipientUserId);
 
   if (!sender || !recipient) return false;
+
+  // Spectators have unlocked God-view
+  if (recipient.status === 'ELIMINATED') return true;
+
   if (sender.role === 'UNASSIGNED' || recipient.role === 'UNASSIGNED') return false;
 
   // Strict rule: live locations are teammates-only

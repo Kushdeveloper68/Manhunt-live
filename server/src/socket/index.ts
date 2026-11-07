@@ -3,6 +3,7 @@ import { socketAuthMiddleware, AuthenticatedSocket } from './auth.js';
 import { registerLobbyHandlers } from './lobbyHandler.js';
 import { registerLocationHandlers } from './locationHandler.js';
 import { registerSafetyHandlers } from './safetyHandler.js';
+import { registerTagHandlers } from './tagHandler.js';
 import { gameLoopManager } from '../game/gameLoop.js';
 import { logger } from '../logger.js';
 
@@ -17,10 +18,11 @@ export function setupSocketIO(io: Server) {
     const user = socket.data.user;
     logger.info(`Socket connected: ${socket.id} (user: ${user?.username} / ${user?.userId})`);
 
-    // Register lobby, location & safety handlers
+    // Register lobby, location, safety & tag handlers
     registerLobbyHandlers(io, socket);
     registerLocationHandlers(io, socket);
     registerSafetyHandlers(io, socket);
+    registerTagHandlers(io, socket);
 
     socket.on('disconnect', (reason) => {
       logger.info(`Socket disconnected: ${socket.id} (reason: ${reason})`);

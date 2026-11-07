@@ -33,10 +33,23 @@ interface LiveGameStateProps {
   matchEnd: { winnerRole: string; reason: string } | null;
   exposedAlert: boolean;
   compassHeading: number;
+  pendingTagAttempt: {
+    attemptId: string;
+    gameId: string;
+    chaserUserId: string;
+    chaserUsername: string;
+    distanceMeters: number;
+    expiresAt: number;
+  } | null;
+  eliminatedData: {
+    taggedBy: string;
+    taggedAt: number;
+  } | null;
 
   initGame: (initialState: GameStateSync, currentUserId: string) => void;
   updateLocation: (coords: { latitude: number; longitude: number }, speed?: number, heading?: number, isMock?: boolean) => void;
   dismissExposedAlert: () => void;
+  clearPendingTagAttempt: () => void;
   resetGame: () => void;
 }
 
@@ -62,7 +75,9 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
   zoneViolation: null,
   matchEnd: null,
   exposedAlert: false,
-  compassHeading: 12, // Default heading 12 deg
+  compassHeading: 12,
+  pendingTagAttempt: null,
+  eliminatedData: null,
 
   initGame: (initialState: GameStateSync, currentUserId: string) => {
     const myPlayer = initialState.players.find((p) => p.userId === currentUserId);
@@ -135,6 +150,64 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
         }
       });
 
+      // Listen for incoming TAG_ATTEMPT (for runner)
+      socket.off(SOCKET_EVENTS.TAG_ATTEMPT);
+      socket.on(SOCKET_EVENTS.TAG_ATTEMPT, (attempt: any) => {
+        set({
+          pendingTagAttempt: {
+            attemptId: attempt.attemptId,
+            gameId: attempt.gameId,
+            chaserUserId: attempt.chaserUserId,
+            chaserUsername: attempt.chaserUsername || 'UNKNOWN CHASER',
+            distanceMeters: attempt.distanceMeters || 1,
+            expiresAt: attempt.expiresAt || (Date.now() + 45000),
+          },
+        });
+      });
+
+      // Listen for TAG_DISPUTE
+      socket.off(SOCKET_EVENTS.TAG_DISPUTE);
+      socket.on(SOCKET_EVENTS.TAG_DISPUTE, () => {
+        set({ pendingTagAttempt: null });
+      });
+
+      // Listen for PLAYER_TAGGED & PLAYER_ELIMINATED
+      socket.off(SOCKET_EVENTS.PLAYER_ELIMINATED);
+      socket.on(SOCKET_EVENTS.PLAYER_ELIMINATED, (data: { runnerUserId: string; runnerUsername: string; remainingRunners: number; eliminatedAt: number }) => {
+        const updatedPlayers = get().players.map((p) =>
+          p.userId === data.runnerUserId ? { ...p, status: 'ELIMINATED' as const } : p
+        );
+        const isMe = data.runnerUserId === currentUserId;
+        set({
+          players: updatedPlayers,
+          pendingTagAttempt: isMe ? null : get().pendingTagAttempt,
+          eliminatedData: isMe
+            ? {
+                taggedBy: 'CHASER',
+                taggedAt: data.eliminatedAt || Date.now(),
+              }
+            : get().eliminatedData,
+        });
+      });
+
+      // Listen for full game state sync
+      socket.off(SOCKET_EVENTS.GAME_STATE);
+      socket.on(SOCKET_EVENTS.GAME_STATE, (sync: GameStateSync) => {
+        const me = sync.players.find((p) => p.userId === currentUserId);
+        set({
+          players: sync.players,
+          teammateLocations: sync.teammateLocations,
+          runnerSnapshots: sync.runnerSnapshots,
+          currentZone: sync.currentZone,
+          status: sync.status,
+          nextRevealTimestamp: sync.nextRevealTimestamp,
+          nextShrinkTimestamp: sync.nextShrinkTimestamp,
+          eliminatedData: me?.status === 'ELIMINATED' && me.taggedBy
+            ? { taggedBy: me.taggedBy, taggedAt: me.taggedAt || Date.now() }
+            : get().eliminatedData,
+        });
+      });
+
       // Listen for game end
       socket.off(SOCKET_EVENTS.GAME_END);
       socket.on(SOCKET_EVENTS.GAME_END, (data: { winningRole: string; reason: string }) => {
@@ -168,6 +241,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
   },
 
   dismissExposedAlert: () => set({ exposedAlert: false }),
+  clearPendingTagAttempt: () => set({ pendingTagAttempt: null }),
 
   resetGame: () =>
     set({
@@ -189,5 +263,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
       zoneViolation: null,
       matchEnd: null,
       exposedAlert: false,
+      pendingTagAttempt: null,
+      eliminatedData: null,
     }),
 }));

@@ -1,9 +1,15 @@
 import { Server } from 'socket.io';
 import { socketAuthMiddleware, AuthenticatedSocket } from './auth.js';
 import { registerLobbyHandlers } from './lobbyHandler.js';
+import { registerLocationHandlers } from './locationHandler.js';
+import { registerSafetyHandlers } from './safetyHandler.js';
+import { gameLoopManager } from '../game/gameLoop.js';
 import { logger } from '../logger.js';
 
 export function setupSocketIO(io: Server) {
+  // Initialize game loop with io instance
+  gameLoopManager.init(io);
+
   // Use JWT authentication middleware for every incoming connection
   io.use(socketAuthMiddleware);
 
@@ -11,8 +17,10 @@ export function setupSocketIO(io: Server) {
     const user = socket.data.user;
     logger.info(`Socket connected: ${socket.id} (user: ${user?.username} / ${user?.userId})`);
 
-    // Register lobby handlers
+    // Register lobby, location & safety handlers
     registerLobbyHandlers(io, socket);
+    registerLocationHandlers(io, socket);
+    registerSafetyHandlers(io, socket);
 
     socket.on('disconnect', (reason) => {
       logger.info(`Socket disconnected: ${socket.id} (reason: ${reason})`);

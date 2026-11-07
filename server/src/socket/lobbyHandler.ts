@@ -5,6 +5,7 @@ import { SOCKET_EVENTS } from '@manhunt/shared';
 import { Game } from '../models/Game.js';
 import { User } from '../models/User.js';
 import { formatGameState } from '../utils/gameState.js';
+import { gameLoopManager } from '../game/gameLoop.js';
 import { AuthenticatedSocket } from './auth.js';
 import { logger } from '../logger.js';
 
@@ -400,6 +401,9 @@ export function registerLobbyHandlers(io: Server, socket: AuthenticatedSocket) {
         .populate('players.userId', 'username avatarId stats');
 
       if (!populated) return;
+
+      // Start live game loop & in-memory state
+      await gameLoopManager.startGame(game._id.toString(), populated);
 
       const state = formatGameState(populated);
       const roomName = `game:${game._id.toString()}`;

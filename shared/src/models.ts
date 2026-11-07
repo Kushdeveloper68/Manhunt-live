@@ -49,6 +49,9 @@ export interface GamePlayer {
   status: PlayerStatus;
   ready: boolean;
   isHost?: boolean;
+  tagCode?: string;
+  taggedAt?: number;
+  taggedBy?: string;
 }
 
 export interface EmergencyContact {

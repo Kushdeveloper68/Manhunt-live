@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { SOCKET_EVENTS, LivePlayerLocation } from '@manhunt/shared';
 import { gameStateStore } from '../game/gameStateStore.js';
 import { isImpossibleSpeedJump } from '../game/math.js';
+import { canReceiveLiveLocation } from '../game/visibility.js';
 import { AuthenticatedSocket } from './auth.js';
 import { logger } from '../logger.js';
 
@@ -24,6 +25,11 @@ const lastUpdateMap = new Map<string, number>();
 
 export function registerLocationHandlers(io: Server, socket: AuthenticatedSocket) {
   const user = socket.data.user!;
+
+  // Don't keep rate-limit entries for users who left
+  socket.on('disconnect', () => {
+    lastUpdateMap.delete(user.userId);
+  });
 
   socket.on(SOCKET_EVENTS.LOCATION_UPDATE, async (payload: unknown) => {
     try {
@@ -53,6 +59,7 @@ export function registerLocationHandlers(io: Server, socket: AuthenticatedSocket
         accuracy: data.accuracy,
         timestamp: data.timestamp || now,
         isMock: data.isMock,
+        receivedAt: now, // trusted server time, used for tag freshness checks
       };
 
       // 3. Anti-Cheat Checks
@@ -80,12 +87,11 @@ export function registerLocationHandlers(io: Server, socket: AuthenticatedSocket
         for (const sockId of socketsInRoom) {
           const targetSock = io.sockets.sockets.get(sockId) as AuthenticatedSocket;
           if (targetSock && targetSock.data?.user) {
-            const targetPlayer = state.players.find(
-              (p) => p.userId === targetSock.data.user?.userId
-            );
+            const recipientId = targetSock.data.user.userId;
 
-            // Teammates only receive live location!
-            if (targetPlayer && targetPlayer.role === player.role) {
+            // Single source of truth for who may see a live location (teammates,
+            // eliminated spectators, and zone-penalty reveals).
+            if (canReceiveLiveLocation(state, user.userId, recipientId)) {
               targetSock.emit(SOCKET_EVENTS.LOCATION_UPDATE, newLocation);
             }
           }

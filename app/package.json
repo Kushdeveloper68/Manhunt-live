@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@manhunt/shared": "*",
+    "@react-native-google-signin/google-signin": "^13.3.1",
     "expo": "~52.0.0",
     "expo-constants": "~17.0.0",
     "expo-font": "~13.0.0",

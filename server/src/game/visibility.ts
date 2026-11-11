@@ -39,6 +39,17 @@ export function filterStateForPlayer(
     // Teammate condition: same role, active status
     if (locPlayer.role === targetRole && targetRole !== 'UNASSIGNED') {
       visibleTeammateLocations.push(loc);
+      continue;
+    }
+
+    // Zone-penalty REVEAL: a runner who stayed out of bounds is permanently visible to chasers
+    if (
+      targetRole === 'CHASER' &&
+      locPlayer.role === 'RUNNER' &&
+      locPlayer.status === 'ACTIVE' &&
+      state.permanentReveal?.has(userId)
+    ) {
+      visibleTeammateLocations.push(loc);
     }
   }
 
@@ -47,8 +58,12 @@ export function filterStateForPlayer(
   if (targetRole === 'CHASER' || isSpectator) {
     // Chasers and Spectators see the periodic snapshots captured at reveal ticks
     visibleRunnerSnapshots = [...state.runnerSnapshots];
-  } else if (state.settings.revealMode === 'BOTH_WAYS') {
-    visibleRunnerSnapshots = [...state.runnerSnapshots];
+  }
+
+  // BOTH_WAYS: runners get periodic snapshots of the CHASERS (never of their own team)
+  let visibleChaserSnapshots: RunnerSnapshot[] | undefined;
+  if (state.settings.revealMode === 'BOTH_WAYS' && (targetRole === 'RUNNER' || isSpectator)) {
+    visibleChaserSnapshots = [...(state.chaserSnapshots || [])];
   }
 
   return {
@@ -79,6 +94,7 @@ export function filterStateForPlayer(
     nextShrinkTimestamp: state.nextShrinkAt,
     teammateLocations: visibleTeammateLocations,
     runnerSnapshots: visibleRunnerSnapshots,
+    chaserSnapshots: visibleChaserSnapshots,
   };
 }
 
@@ -102,6 +118,15 @@ export function canReceiveLiveLocation(
   if (recipient.status === 'ELIMINATED') return true;
 
   if (sender.role === 'UNASSIGNED' || recipient.role === 'UNASSIGNED') return false;
+
+  // Zone-penalty REVEAL: permanently exposed runners are visible to chasers
+  if (
+    sender.role === 'RUNNER' &&
+    recipient.role === 'CHASER' &&
+    state.permanentReveal?.has(sender.userId)
+  ) {
+    return true;
+  }
 
   // Strict rule: live locations are teammates-only
   return sender.role === recipient.role;

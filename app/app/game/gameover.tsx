@@ -30,11 +30,9 @@ export default function GameOverScreen() {
 
   const { matchEnd, myRole, players, startedAt, durationMin, resetGame } = useLiveGameStore();
 
-  const winnerRole = matchEnd?.winnerRole || 'RUNNER';
-  const reason = matchEnd?.reason || 'SURVIVED: Match duration ended';
-  const isWinner =
-    (winnerRole === 'RUNNER' && myRole === 'RUNNER') ||
-    (winnerRole === 'CHASER' && myRole === 'CHASER');
+  const winnerRole = matchEnd?.winnerRole ?? null;
+  const reason = matchEnd?.reason || 'Match ended';
+  const isWinner = winnerRole !== null && winnerRole === myRole;
 
   const matchDurationMin = startedAt
     ? Math.round((Date.now() - startedAt) / 60000)
@@ -46,16 +44,10 @@ export default function GameOverScreen() {
   ).length;
   const totalRunners = players.filter((p) => p.role === 'RUNNER').length;
   const totalChasers = players.filter((p) => p.role === 'CHASER').length;
-  const totalPlayers = players.length || 8;
+  const totalPlayers = players.length;
 
-  // Fallback demo stats for profile
-  const userStats = {
-    tags: user?.stats?.tags || 3,
-    kmRun: user?.stats?.kmRun || 2.4,
-    wins: user?.stats?.wins || 1,
-    games: user?.stats?.games || 1,
-    xpEarned: isWinner ? 450 : 120,
-  };
+  // Real per-match numbers from live game state
+  const matchTags = players.filter((p) => p.taggedBy && p.taggedBy === user?.id).length;
 
   // Victory/defeat animations
   const bannerScale = useRef(new Animated.Value(0.6)).current;
@@ -120,7 +112,7 @@ export default function GameOverScreen() {
                 {isWinner ? 'MISSION COMPLETE' : 'OPERATIVE DOWN'}
               </Text>
               <Text style={[styles.outcomeRole, { color: bannerTextColor, opacity: 0.7 }]}>
-                {winnerRole}S WIN
+                {winnerRole ? `${winnerRole}S WIN` : 'MATCH ENDED'}
               </Text>
             </View>
           </View>
@@ -153,18 +145,18 @@ export default function GameOverScreen() {
           <Text style={styles.sectionLabel}>OPERATIVE STATS</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{userStats.tags}</Text>
+              <Text style={styles.statValue}>{matchTags}</Text>
               <Text style={styles.statKey}>TAGS</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{userStats.kmRun.toFixed(1)}</Text>
-              <Text style={styles.statKey}>KM RUN</Text>
+              <Text style={styles.statValue}>{myRole ?? '—'}</Text>
+              <Text style={styles.statKey}>YOUR ROLE</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={[styles.statValue, { color: colors.accentPrimary }]}>
-                +{userStats.xpEarned}
+                {runnersAlive}/{totalRunners}
               </Text>
-              <Text style={styles.statKey}>XP EARNED</Text>
+              <Text style={styles.statKey}>RUNNERS LEFT</Text>
             </View>
           </View>
         </Animated.View>
@@ -211,13 +203,17 @@ export default function GameOverScreen() {
 
         {/* Leaderboard Top 3 Stub */}
         <Animated.View style={[styles.section, { opacity: statsFadeIn }]}>
-          <Text style={styles.sectionLabel}>SESSION LEADERBOARD</Text>
+          <Text style={styles.sectionLabel}>FINAL ROSTER</Text>
           <View style={styles.leaderboardCard}>
-            {[
-              { rank: 1, name: user?.username?.toUpperCase() || 'SHADOW_RUNNER', role: myRole, xp: userStats.xpEarned + 50 },
-              { rank: 2, name: 'KRONOS_9', role: 'CHASER', xp: 300 },
-              { rank: 3, name: 'NEON_HARE', role: 'RUNNER', xp: 220 },
-            ].map((entry) => (
+            {[...players]
+              .sort((a, b) => (a.status === 'ACTIVE' ? 0 : 1) - (b.status === 'ACTIVE' ? 0 : 1))
+              .map((p, i) => ({
+                rank: i + 1,
+                name: p.username.toUpperCase(),
+                role: p.role,
+                label: p.status === 'ACTIVE' ? (p.role === 'RUNNER' ? 'SURVIVED' : 'ACTIVE') : 'TAGGED',
+              }))
+              .map((entry) => (
               <View key={entry.rank} style={styles.leaderRow}>
                 <View style={styles.leaderRankBox}>
                   <Text style={[
@@ -237,7 +233,7 @@ export default function GameOverScreen() {
                 ]}>
                   @{entry.name}
                 </Text>
-                <Text style={styles.leaderXP}>+{entry.xp} XP</Text>
+                <Text style={styles.leaderXP}>{entry.label}</Text>
               </View>
             ))}
           </View>

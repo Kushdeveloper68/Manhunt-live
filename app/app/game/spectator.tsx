@@ -27,12 +27,20 @@ export default function SpectatorScreen() {
     players,
     teammateLocations,
     eliminatedData,
+    matchEnd,
     resetGame,
   } = useLiveGameStore();
 
+  // When the match ends while spectating, show the result screen
+  useEffect(() => {
+    if (matchEnd) {
+      router.replace('/game/gameover');
+    }
+  }, [matchEnd]);
+
   const [isBannerCollapsed, setIsBannerCollapsed] = useState(false);
   const [selectedOperativeIndex, setSelectedOperativeIndex] = useState(0);
-  const [matchElapsedSec, setMatchElapsedSec] = useState(3138); // Default 52:18 mock
+  const [matchElapsedSec, setMatchElapsedSec] = useState(0);
   const [cameraMode, setCameraMode] = useState<'lock' | 'free'>('lock');
 
   // Compute live match elapsed timer

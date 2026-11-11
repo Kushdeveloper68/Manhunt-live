@@ -83,7 +83,7 @@ class ApiService {
     });
   }
 
-  async googleAuth(data: { googleId: string; email: string; username?: string; avatarId?: string }): Promise<{ token: string; user: UserProfile }> {
+  async googleAuth(data: { idToken?: string; googleId?: string; email?: string; username?: string; avatarId?: string }): Promise<{ token: string; user: UserProfile }> {
     return this.request('/auth/google', {
       method: 'POST',
       body: JSON.stringify(data),

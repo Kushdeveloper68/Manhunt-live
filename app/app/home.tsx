@@ -43,7 +43,7 @@ export default function HomeScreen() {
           </Pressable>
           <Pressable
             style={styles.profileBadge}
-            onPress={() => router.push('/auth/profile')}
+            onPress={() => router.push('/profile')}
           >
             <Text style={styles.profileBadgeText}>👤</Text>
           </Pressable>
@@ -219,7 +219,14 @@ export default function HomeScreen() {
         </Pressable>
         <Pressable
           style={styles.navItem}
-          onPress={() => router.push('/auth/profile')}
+          onPress={() => router.push('/friends')}
+        >
+          <Text style={styles.navIcon}>🤝</Text>
+          <Text style={styles.navLabel}>FRIENDS</Text>
+        </Pressable>
+        <Pressable
+          style={styles.navItem}
+          onPress={() => router.push('/profile')}
         >
           <Text style={styles.navIcon}>🎖</Text>
           <Text style={styles.navLabel}>PROFILE</Text>

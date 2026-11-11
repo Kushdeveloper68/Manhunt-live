@@ -17,7 +17,11 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.manhunt.live",
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ],
         "NSLocationAlwaysAndWhenInUseUsageDescription": "MANHUNT LIVE tracks your location to power the real-world GPS pursuit game.",
         "NSLocationWhenInUseUsageDescription": "MANHUNT LIVE tracks your location to power the real-world GPS pursuit game."
       }
@@ -39,7 +43,8 @@
       ]
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true

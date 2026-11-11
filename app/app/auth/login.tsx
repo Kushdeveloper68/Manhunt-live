@@ -14,6 +14,7 @@ import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
 import { BottomSheet } from '../../src/components/BottomSheet';
 import { useAuthStore } from '../../src/stores/authStore';
+import { getGoogleIdToken, DEV_GOOGLE_MOCK_ENABLED } from '../../src/services/googleSignIn';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -28,10 +29,15 @@ export default function LoginScreen() {
 
   const handleGoogleSignIn = async () => {
     try {
-      // Mock Google OAuth login flow (can be replaced with GoogleSignin.signIn() on device)
-      const mockGoogleId = `google_user_${Math.floor(100000 + Math.random() * 900000)}`;
-      const mockEmail = `operator_${mockGoogleId.slice(-4)}@gmail.com`;
-      await loginGoogle(mockGoogleId, mockEmail);
+      if (DEV_GOOGLE_MOCK_ENABLED) {
+        // DEV ONLY (needs ALLOW_DEV_GOOGLE_MOCK=true on the server): fake identity, no real Google
+        const mockGoogleId = `google_user_${Math.floor(100000 + Math.random() * 900000)}`;
+        await loginGoogle({ googleId: mockGoogleId, email: `operator_${mockGoogleId.slice(-4)}@gmail.com` });
+      } else {
+        // Real flow: Google returns an ID token, the server verifies it
+        const idToken = await getGoogleIdToken();
+        await loginGoogle({ idToken });
+      }
       router.replace('/auth/profile');
     } catch (err) {
       Alert.alert('Sign-In Error', err instanceof Error ? err.message : 'Google sign-in failed');

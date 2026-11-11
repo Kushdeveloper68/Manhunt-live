@@ -192,18 +192,11 @@ export default function TagVerificationScreen() {
 
   function handleTriggerOpticalPing() {
     Vibration.vibrate([40, 60]);
-    if (gameId && isSocketConnected()) {
-      getSocket().emit(SOCKET_EVENTS.TAG_ATTEMPT, {
-        gameId,
-      });
-    }
-    showToast('Optical sensor lock registered. Transmitting ping...', 'success');
-    setTimeout(() => {
-      router.back();
-    }, 1500);
+    // QR/optical tagging is not available yet; a tag always needs the runner's 4-digit code.
+    showToast('QR tagging is coming soon. Enter the runner\'s 4-digit code instead.', 'danger');
   }
 
-  const chaserName = pendingTagAttempt?.chaserUsername || 'KRONOS_9';
+  const chaserName = pendingTagAttempt?.chaserUsername || 'UNKNOWN CHASER';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>

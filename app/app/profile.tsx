@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuthStore } from '../../src/stores/authStore';
-import { colors, spacing, radii, typography } from '../../src/theme/theme';
+import { useAuthStore } from '../src/stores/authStore';
+import { colors, spacing, radii, typography } from '../src/theme/theme';
 
 const fMono = typography.labelMonoSm.fontFamily;
 const fMonoMd = typography.labelMonoMd.fontFamily;
@@ -42,7 +42,7 @@ export default function ProfileScreen() {
   );
 
   const username = user?.username?.toUpperCase() || 'SHADOW_RUNNER';
-  const stats = user?.stats || { games: 42, wins: 28, tags: 64, escapes: 18, kmRun: 142.3 };
+  const stats = user?.stats || { games: 0, wins: 0, tags: 0, escapes: 0, kmRun: 0 };
   const winRate =
     stats.games > 0 ? Math.round((stats.wins / stats.games) * 100) : 0;
 

@@ -4,12 +4,15 @@ import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
 import { gamesRouter } from './routes/games.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { config } from './config.js';
 
 export function createApp() {
   const app = express();
 
-  app.use(cors());
-  app.use(express.json());
+  // Native apps send no Origin header, so CORS only matters for web clients.
+  const origins = config.CLIENT_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean);
+  app.use(cors(origins.includes('*') ? undefined : { origin: origins }));
+  app.use(express.json({ limit: '100kb' }));
 
   // Base routes
   app.use('/api', healthRouter);

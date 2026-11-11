@@ -13,7 +13,7 @@ interface AuthState {
   clearAuth: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, username: string) => Promise<void>;
-  loginGoogle: (googleId: string, email: string, username?: string) => Promise<void>;
+  loginGoogle: (payload: { idToken?: string; googleId?: string; email?: string; username?: string }) => Promise<void>;
   updateProfile: (data: {
     username?: string;
     avatarId?: string;
@@ -67,10 +67,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  loginGoogle: async (googleId: string, email: string, username?: string) => {
+  loginGoogle: async (payload) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api.googleAuth({ googleId, email, username });
+      const res = await api.googleAuth(payload);
       get().setAuth(res.token, res.user);
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Google sign-in failed' });

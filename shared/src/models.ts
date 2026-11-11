@@ -26,6 +26,7 @@ export interface ZoneShrinkSettings {
   startAfterMin: number;
   percent: number; // e.g. 20%
   count: number; // number of shrink stages
+  intervalMin?: number; // minutes between shrinks (defaults to startAfterMin)
 }
 
 export interface GameSettings {
@@ -90,6 +91,7 @@ export interface LivePlayerLocation {
   accuracy?: number;
   timestamp: number;
   isMock?: boolean;
+  receivedAt?: number; // server receive time (trusted, unlike client timestamp)
 }
 
 export interface RunnerSnapshot {
@@ -115,4 +117,5 @@ export interface GameStateSync {
   nextShrinkTimestamp?: number;
   teammateLocations: LivePlayerLocation[];
   runnerSnapshots: RunnerSnapshot[]; // revealed pings for chasers
+  chaserSnapshots?: RunnerSnapshot[]; // revealed pings for runners (BOTH_WAYS mode only)
 }

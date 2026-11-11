@@ -25,6 +25,9 @@ export interface LiveGameState {
   locations: Map<string, LivePlayerLocation>;
   runnerSnapshots: RunnerSnapshot[];
   tagCodes: Map<string, string>;
+  chaserSnapshots?: RunnerSnapshot[];
+  breachStartedAt?: Map<string, number>; // userId -> when current zone breach began
+  permanentReveal?: Set<string>; // runners whose live location is exposed to chasers (zone penalty)
   winnerRole?: 'CHASER' | 'RUNNER';
   endReason?: string;
 }

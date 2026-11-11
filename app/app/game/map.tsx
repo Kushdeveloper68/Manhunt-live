@@ -128,7 +128,7 @@ export default function LiveMapScreen() {
       Alert.alert(
         `MATCH OVER: ${matchEnd.winnerRole}S WIN`,
         matchEnd.reason,
-        [{ text: 'VIEW SUMMARY', onPress: () => router.replace('/home') }]
+        [{ text: 'VIEW SUMMARY', onPress: () => router.replace('/game/gameover') }]
       );
     }
   }, [status, matchEnd]);

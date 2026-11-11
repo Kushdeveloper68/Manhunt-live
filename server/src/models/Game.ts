@@ -82,6 +82,7 @@ const GameSettingsSchema = new Schema<GameSettings>(
       startAfterMin: { type: Number, default: 30 },
       percent: { type: Number, default: 25 },
       count: { type: Number, default: 3 },
+      intervalMin: { type: Number },
     },
     tagMethod: { type: String, enum: ['CODE', 'QR'], default: 'CODE' },
     outOfZonePenalty: {

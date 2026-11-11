@@ -144,10 +144,13 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
 
       // Listen for zone violation alerts
       socket.off(SOCKET_EVENTS.ZONE_VIOLATION);
-      socket.on(SOCKET_EVENTS.ZONE_VIOLATION, (data: { userId: string; distanceOutsideMeters: number; penalty: string }) => {
-        if (data.userId === currentUserId) {
-          set({ zoneViolation: { distanceOutsideMeters: data.distanceOutsideMeters, penalty: data.penalty } });
+      socket.on(SOCKET_EVENTS.ZONE_VIOLATION, (data: { userId: string; inViolation?: boolean; distanceOutsideMeters: number; penalty: string }) => {
+        if (data.userId !== currentUserId) return;
+        if (data.inViolation === false) {
+          set({ zoneViolation: null }); // back inside the zone
+          return;
         }
+        set({ zoneViolation: { distanceOutsideMeters: data.distanceOutsideMeters, penalty: data.penalty } });
       });
 
       // Listen for incoming TAG_ATTEMPT (for runner)

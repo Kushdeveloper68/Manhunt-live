@@ -36,6 +36,7 @@ const createGameSchema = z.object({
       startAfterMin: z.number().min(0).default(30),
       percent: z.number().min(5).max(75).default(25),
       count: z.number().min(1).max(10).default(3),
+      intervalMin: z.number().min(1).max(180).optional(),
     }).default({
       startAfterMin: 30,
       percent: 25,

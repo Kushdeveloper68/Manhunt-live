@@ -1,5 +1,8 @@
 import { Router, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
+import { config, googleAudiences } from '../config.js';
+import { resolveGoogleIdentity } from '../services/googleAuth.js';
 import { User } from '../models/User.js';
 import {
   hashPassword,
@@ -11,6 +14,16 @@ import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 export const authRouter = Router();
+
+// Brute-force protection for credential endpoints (disabled under test)
+const credentialLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => config.NODE_ENV === 'test',
+  message: { error: 'Too many attempts. Please try again in a few minutes.' },
+});
 
 // Validation schemas
 const registerSchema = z.object({
@@ -29,8 +42,10 @@ const loginSchema = z.object({
 });
 
 const googleAuthSchema = z.object({
-  googleId: z.string().min(1, 'Google ID is required'),
-  email: z.string().email(),
+  idToken: z.string().min(20).optional(),
+  // googleId + email are only honoured in explicit dev-mock mode (see resolveGoogleIdentity)
+  googleId: z.string().min(1).optional(),
+  email: z.string().email().optional(),
   username: z.string().optional(),
   avatarId: z.string().optional(),
 });
@@ -81,7 +96,7 @@ authRouter.get('/check-username', async (req, res, next) => {
 });
 
 // Email/Password Registration
-authRouter.post('/register', async (req, res, next) => {
+authRouter.post('/register', credentialLimiter, async (req, res, next) => {
   try {
     const data = registerSchema.parse(req.body);
     const lowercaseEmail = data.email.toLowerCase().trim();
@@ -125,7 +140,7 @@ authRouter.post('/register', async (req, res, next) => {
 });
 
 // Email/Password Login
-authRouter.post('/login', async (req, res, next) => {
+authRouter.post('/login', credentialLimiter, async (req, res, next) => {
   try {
     const data = loginSchema.parse(req.body);
     const lowercaseEmail = data.email.toLowerCase().trim();
@@ -151,14 +166,24 @@ authRouter.post('/login', async (req, res, next) => {
 });
 
 // Google Sign-In
-authRouter.post('/google', async (req, res, next) => {
+authRouter.post('/google', credentialLimiter, async (req, res, next) => {
   try {
     const data = googleAuthSchema.parse(req.body);
-    const lowercaseEmail = data.email.toLowerCase().trim();
+    const identity = await resolveGoogleIdentity(data, {
+      audiences: googleAudiences(),
+      allowDevMock: config.ALLOW_DEV_GOOGLE_MOCK,
+      nodeEnv: config.NODE_ENV,
+    });
+    const lowercaseEmail = identity.email;
 
     let user = await User.findOne({
-      $or: [{ googleId: data.googleId }, { email: lowercaseEmail }],
+      $or: [{ googleId: identity.googleId }, { email: lowercaseEmail }],
     });
+
+    // Never re-link an account that is already bound to a different Google identity
+    if (user?.googleId && user.googleId !== identity.googleId) {
+      throw new AppError('This email is already linked to a different Google account', 409);
+    }
 
     if (!user) {
       // Generate default unique username from email handle if not provided
@@ -175,7 +200,7 @@ authRouter.post('/google', async (req, res, next) => {
       }
 
       user = await User.create({
-        googleId: data.googleId,
+        googleId: identity.googleId,
         email: lowercaseEmail,
         username: candidateUsername,
         avatarId: data.avatarId || 'wolf',
@@ -188,7 +213,7 @@ authRouter.post('/google', async (req, res, next) => {
         },
       });
     } else if (!user.googleId) {
-      user.googleId = data.googleId;
+      user.googleId = identity.googleId;
       await user.save();
     }
 

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#131313;color:#e5e2e1;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "background": "#131313", "surface-tint": "#a6d700", "surface-container-highest": "#353534", "on-secondary": "#68001a", "on-surface-variant": "#c3caac", "inverse-primary": "#4e6700", "secondary": "#ffb3b6", "on-tertiary-fixed-variant": "#004e5a", "outline-variant": "#434933", "secondary-container": "#c7003a", "on-primary-fixed-variant": "#3a4d00", "error-container": "#93000a", "secondary-fixed-dim": "#ffb3b6", "on-secondary-container": "#ffd7d7", "surface-bright": "#3a3939", "on-primary": "#273500", "on-surface": "#e5e2e1", "on-tertiary": "#00363e", "error": "#ffb4ab", "on-secondary-fixed": "#40000c", "outline": "#8d9479", "surface-container-lowest": "#0e0e0e", "tertiary-container": "#a2eeff", "surface-dim": "#131313", "on-secondary-fixed-variant": "#920028", "primary-fixed": "#bef500", "primary-container": "#bef500", "primary-fixed-dim": "#a6d700", "on-error": "#690005", "on-tertiary-container": "#006f7e", "inverse-on-surface": "#313030", "surface-variant": "#353534", "on-primary-fixed": "#151f00", "tertiary": "#ffffff", "on-tertiary-fixed": "#001f25", "tertiary-fixed-dim": "#2fd9f4", "primary": "#ffffff", "tertiary-fixed": "#a2eeff", "surface-container-high": "#2a2a2a", "surface-container": "#201f1f", "on-primary-container": "#536d00", "on-background": "#e5e2e1", "surface-container-low": "#1c1b1b", "secondary-fixed": "#ffdada", "inverse-surface": "#e5e2e1", "on-error-container": "#ffdad6", "surface": "#131313" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "margin": "1.5rem", "space-xl": "2rem", "space-xs": "0.25rem", "gutter": "1rem", "space-md": "1rem", "space-lg": "1.5rem", "space-sm": "0.5rem" }, fontFamily: { "display-hero-mobile": ["Anton"], "headline-sm": ["Anton"], "label-mono-sm": ["JetBrains Mono"], "headline-md": ["Anton"], "label-mono-md": ["JetBrains Mono"], "body-md": ["Inter"], "body-sm": ["Inter"], "headline-lg": ["Anton"], "display-hero": ["Anton"], "body-lg": ["Inter"], "label-mono-lg": ["JetBrains Mono"] }, fontSize: { "display-hero-mobile": ["36px", { lineHeight: "40px", letterSpacing: "0.02em", fontWeight: "400" }], "headline-sm": ["20px", { lineHeight: "24px", letterSpacing: "0.04em", fontWeight: "400" }], "label-mono-sm": ["11px", { lineHeight: "14px", letterSpacing: "0.04em", fontWeight: "500" }], "headline-md": ["24px", { lineHeight: "28px", letterSpacing: "0.03em", fontWeight: "400" }], "label-mono-md": ["14px", { lineHeight: "18px", letterSpacing: "0.01em", fontWeight: "500" }], "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }], "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }], "headline-lg": ["32px", { lineHeight: "36px", letterSpacing: "0.03em", fontWeight: "400" }], "display-hero": ["44px", { lineHeight: "48px", letterSpacing: "0.02em", fontWeight: "400" }], "body-lg": ["16px", { lineHeight: "24px", fontWeight: "500" }], "label-mono-lg": ["18px", { lineHeight: "22px", letterSpacing: "-0.02em", fontWeight: "700" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] pt-safe"><div class="flex items-center justify-between px-margin h-16"><div class="flex items-center gap-space-sm"><button class="w-11 h-11 flex items-center justify-center text-on-surface hover:text-primary transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><img alt="MANHUNT Crosshair Icon" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1V0tpwCLNEa92G8gt-Ni-bBGO3u1WlMRJBCUe-2iXpwFKVAYSuy354t4LGrEeldut4tJqTe6EOLujJvCLgXvsGIy1SzBtntDghix-9dGjD6WUqfTXMXLCces9o6Ilh5UHQEktL6ivsFibl1FbJ9SAri2nygTWaHmzt3JT8r-6E22PlQx7VqIRHAFyvsLn4nY2yNAnPSWoNbjCe-VYWTpzZmnZfCjvp9gGBYqM8Cf_QL"/><h1 class="font-headline-sm text-headline-sm uppercase text-on-surface truncate">Sector Access Code</h1></div><div class="flex items-center gap-space-sm"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full px-margin pb-safe select-none">
+<!-- Status Chip / Tactical Signal -->
+<div class="pt-space-md flex items-center justify-between">
+<div class="inline-flex items-center gap-space-xs px-space-sm py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed animate-pulse"></span>
+<span class="font-label-mono-sm text-label-mono-sm tracking-wider uppercase">SECURE LINK // ACTIVE</span>
+</div>
+<span class="font-label-mono-sm text-label-mono-sm text-outline">ENC: SHA-256</span>
+</div>
+<!-- Header Block -->
+<div class="mt-space-lg flex flex-col">
+<h2 class="font-headline-lg text-headline-lg uppercase text-on-surface tracking-wide">
+      VERIFY CODE
+    </h2>
+<div class="flex items-center gap-space-xs mt-space-xs flex-wrap font-body-md text-body-md text-on-surface-variant">
+<span>Sent via SMS to</span>
+<span class="font-label-mono-md text-label-mono-md text-on-surface bg-surface-container-high px-1.5 py-0.5 rounded">
+        +1 (555) 839-2041
+      </span>
+<button class="font-label-mono-sm text-label-mono-sm text-primary-fixed-dim uppercase ml-1 hover:underline active:opacity-70 transition-opacity" type="button">
+        Edit
+      </button>
+</div>
+</div>
+<!-- Interactive OTP Input Section -->
+<div class="mt-space-xl flex flex-col items-center">
+<!-- Visual Digit Display Tiles -->
+<div class="grid grid-cols-6 gap-2 w-full max-w-[340px]" id="otp-container">
+<div class="otp-slot flex items-center justify-center h-14 rounded-xl bg-surface-container-high text-on-surface font-label-mono-lg text-label-mono-lg select-none transition-all shadow-sm">
+        8
+      </div>
+<div class="otp-slot flex items-center justify-center h-14 rounded-xl bg-surface-container-high text-on-surface font-label-mono-lg text-label-mono-lg select-none transition-all shadow-sm">
+        4
+      </div>
+<div class="otp-slot flex items-center justify-center h-14 rounded-xl bg-surface-container-high text-on-surface font-label-mono-lg text-label-mono-lg select-none transition-all shadow-sm">
+        2
+      </div>
+<div class="otp-slot flex items-center justify-center h-14 rounded-xl bg-surface-container-high text-on-surface font-label-mono-lg text-label-mono-lg select-none transition-all shadow-sm">
+        9
+      </div>
+<div class="otp-slot flex items-center justify-center h-14 rounded-xl bg-surface-container-high text-on-surface font-label-mono-lg text-label-mono-lg select-none transition-all shadow-sm">
+        0
+      </div>
+<!-- 6th digit: Active State -->
+<div class="otp-slot active-slot relative flex items-center justify-center h-14 rounded-xl bg-surface-bright text-on-surface font-label-mono-lg text-label-mono-lg shadow-md transition-all">
+<span class="inline-block w-0.5 h-6 bg-primary-fixed animate-pulse" id="cursor-indicator"></span>
+</div>
+</div>
+<!-- Hidden Native Input for Functional Keyboard Capture -->
+<input autocomplete="one-time-code" autofocus="" class="opacity-0 absolute pointer-events-auto h-1 w-1 -z-10" id="otp-input" maxlength="6" type="tel" value="84290"/>
+<!-- Inline Error Feedback Banner -->
+<div class="mt-space-lg w-full max-w-[340px] px-space-md py-2.5 rounded-xl bg-error-container text-on-error-container flex items-center justify-center gap-2 transition-all" id="error-pill">
+<span class="material-symbols-outlined text-error text-[18px] flex-shrink-0">error</span>
+<span class="font-body-sm text-body-sm font-medium tracking-tight">
+        Invalid verification code. 2 attempts remaining.
+      </span>
+</div>
+<!-- Resend Countdown Row -->
+<div class="mt-space-lg flex items-center justify-center gap-1 font-body-md text-body-md text-on-surface-variant">
+<span>Didn't receive code?</span>
+<div class="flex items-center gap-1">
+<span>Resend in</span>
+<span class="font-label-mono-md text-label-mono-md text-on-surface bg-surface-container px-1 rounded" id="countdown">
+          00:42
+        </span>
+</div>
+</div>
+</div>
+<!-- Telemetry Tactical Card -->
+<div class="mt-space-xl p-space-md rounded-xl bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-fixed-dim">
+<span class="material-symbols-outlined text-[20px]">radar</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm uppercase text-on-surface leading-tight">GPS CELL MESH</span>
+<span class="font-label-mono-sm text-label-mono-sm text-outline">LOC: SECTOR 4B // GRID 88</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-label-mono-sm text-label-mono-sm px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant">
+        SYNCED
+      </span>
+</div>
+</div>
+<!-- Tactile Keypad Quick Actions (Thumb Zone Helper) -->
+<div class="mt-auto pt-space-xl flex flex-col gap-space-md">
+<!-- Primary Verification Action CTA -->
+<button class="w-full h-[52px] rounded-xl bg-primary-fixed text-on-primary font-body-lg text-body-lg uppercase tracking-wider font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-space-xs shadow-md" id="verify-cta" type="button">
+<span class="material-symbols-outlined text-[20px]">verified_user</span>
+<span>VERIFY &amp; ENTER</span>
+</button>
+<!-- Fallback / Secondary Option -->
+<button class="w-full h-11 rounded-xl bg-surface-container text-on-surface font-body-md text-body-md active:bg-surface-container-high transition-colors flex items-center justify-center" onclick="alert('Requesting phone call verification...')" type="button">
+      Call me with code instead
+    </button>
+</div>
+</div>
+<script>
+  (function () {
+    const input = document.getElementById('otp-input');
+    const container = document.getElementById('otp-container');
+    const slots = container ? container.querySelectorAll('.otp-slot') : [];
+    const verifyCta = document.getElementById('verify-cta');
+    const errorPill = document.getElementById('error-pill');
+
+    function updateSlots(val) {
+      slots.forEach((slot, index) => {
+        slot.className = 'otp-slot flex items-center justify-center h-14 rounded-xl text-on-surface font-label-mono-lg text-label-mono-lg select-none transition-all';
+        if (index < val.length) {
+          slot.classList.add('bg-surface-container-high');
+          slot.innerHTML = val[index];
+        } else if (index === val.length) {
+          slot.classList.add('bg-surface-bright', 'active-slot');
+          slot.innerHTML = '<span class="inline-block w-0.5 h-6 bg-primary-fixed animate-pulse"></span>';
+        } else {
+          slot.classList.add('bg-surface-container-lowest');
+          slot.innerHTML = '';
+        }
+      });
+    }
+
+    if (input) {
+      input.focus();
+      container.addEventListener('click', () => input.focus());
+
+      input.addEventListener('input', (e) => {
+        const cleaned = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = cleaned;
+        updateSlots(cleaned);
+
+        if (cleaned.length === 6) {
+          errorPill.classList.remove('hidden');
+        }
+      });
+    }
+
+    if (verifyCta) {
+      verifyCta.addEventListener('click', () => {
+        if (errorPill) {
+          errorPill.classList.add('scale-105');
+          setTimeout(() => errorPill.classList.remove('scale-105'), 180);
+        }
+      });
+    }
+
+    // Resend countdown timer loop
+    const countdownEl = document.getElementById('countdown');
+    if (countdownEl) {
+      let timeLeft = 42;
+      const interval = setInterval(() => {
+        if (timeLeft > 0) {
+          timeLeft--;
+          countdownEl.textContent = '00:' + (timeLeft < 10 ? '0' : '') + timeLeft;
+        } else {
+          clearInterval(interval);
+          countdownEl.parentElement.innerHTML = '<button class="text-primary-fixed-dim hover:underline uppercase text-xs font-semibold">Resend Now</button>';
+        }
+      }, 1000);
+    }
+  })();
+</script></main></body></html>

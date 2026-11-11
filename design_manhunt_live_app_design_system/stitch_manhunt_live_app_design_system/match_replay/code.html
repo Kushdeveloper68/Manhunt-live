@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-surface": "#e5e2e1", "surface": "#131313", "surface-container-lowest": "#0e0e0e", "on-secondary": "#68001a", "surface-bright": "#3a3939", "on-secondary-container": "#ffd7d7", "surface-container-high": "#2a2a2a", "on-secondary-fixed": "#40000c", "primary-fixed-dim": "#a6d700", "surface-container": "#201f1f", "on-error": "#690005", "on-secondary-fixed-variant": "#920028", "secondary-fixed": "#ffdada", "inverse-on-surface": "#313030", "surface-variant": "#353534", "on-tertiary": "#00363e", "on-surface-variant": "#c3caac", "secondary-container": "#c7003a", "tertiary-fixed": "#a2eeff", "background": "#131313", "error-container": "#93000a", "outline-variant": "#434933", "on-background": "#e5e2e1", "on-primary-fixed-variant": "#3a4d00", "on-tertiary-container": "#006f7e", "inverse-surface": "#e5e2e1", "surface-container-low": "#1c1b1b", "on-tertiary-fixed-variant": "#004e5a", "primary-container": "#bef500", "outline": "#8d9479", "on-primary": "#273500", "primary": "#ffffff", "tertiary-fixed-dim": "#2fd9f4", "surface-dim": "#131313", "tertiary": "#ffffff", "inverse-primary": "#4e6700", "on-primary-fixed": "#151f00", "secondary": "#ffb3b6", "on-primary-container": "#536d00", "on-error-container": "#ffdad6", "error": "#ffb4ab", "tertiary-container": "#a2eeff", "surface-tint": "#a6d700", "primary-fixed": "#bef500", "secondary-fixed-dim": "#ffb3b6", "surface-container-highest": "#353534", "on-tertiary-fixed": "#001f25" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin": "1.5rem", "space-lg": "1.5rem", "space-xs": "0.25rem", "gutter": "1rem", "space-xl": "2rem", "space-sm": "0.5rem", "space-md": "1rem" }, "fontFamily": { "body-sm": ["Inter"], "label-mono-lg": ["JetBrains Mono"], "display-hero-mobile": ["Anton"], "headline-sm": ["Anton"], "display-hero": ["Anton"], "body-lg": ["Inter"], "headline-lg": ["Anton"], "label-mono-md": ["JetBrains Mono"], "headline-md": ["Anton"], "label-mono-sm": ["JetBrains Mono"], "body-md": ["Inter"] }, "fontSize": { "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-mono-lg": ["18px", { "lineHeight": "22px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "display-hero-mobile": ["36px", { "lineHeight": "40px", "letterSpacing": "0.02em", "fontWeight": "400" }], "headline-sm": ["20px", { "lineHeight": "24px", "letterSpacing": "0.04em", "fontWeight": "400" }], "display-hero": ["44px", { "lineHeight": "48px", "letterSpacing": "0.02em", "fontWeight": "400" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }], "headline-lg": ["32px", { "lineHeight": "36px", "letterSpacing": "0.03em", "fontWeight": "400" }], "label-mono-md": ["14px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500" }], "headline-md": ["24px", { "lineHeight": "28px", "letterSpacing": "0.03em", "fontWeight": "400" }], "label-mono-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "500" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen selection:bg-secondary-container selection:text-on-secondary-container"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><button aria-label="Back" class="min-w-[44px] min-h-[44px] flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[20px]">arrow_back</span></button><h1 class="font-headline-sm text-headline-sm tracking-wider uppercase text-on-surface truncate max-w-[220px]">Match Replay</h1></div><div class="flex items-center gap-space-sm"><div class="flex items-center gap-1.5 h-7 px-3 rounded-full bg-surface-container-high text-primary-fixed"><span class="material-symbols-outlined text-[16px]">token</span><span class="font-label-mono-sm text-label-mono-sm font-bold tracking-wider">4,850 CR</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 px-margin bg-surface pb-safe flex-1"><div class="flex flex-col w-full pb-8 space-y-4">
+<!-- Sub-header Meta Ribbon -->
+<div class="flex items-center justify-between px-1 py-1">
+<div class="flex flex-col min-w-0">
+<span class="font-label-mono-sm text-label-mono-sm text-primary-fixed uppercase tracking-wider">Tactical Telemetry Feed</span>
+<span class="font-label-mono-md text-label-mono-md text-on-surface truncate">CENTRAL PARK PURSUIT • #RP-8820</span>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high">
+<span class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></span>
+<span class="font-label-mono-sm text-label-mono-sm text-primary-fixed uppercase">ARCHIVE LOADED</span>
+</div>
+</div>
+<!-- Interactive Tactical Vector Map Stage -->
+<div class="relative w-full h-[360px] rounded-xl overflow-hidden bg-surface-container-lowest shadow-xl flex flex-col justify-between p-3 select-none">
+<!-- Base Vector Map Grid Background -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none opacity-40" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<pattern height="40" id="tactical-grid" patternunits="userSpaceOnUse" width="40">
+<path d="M 40 0 L 0 0 0 40" fill="none" stroke="#353534" stroke-width="0.8"></path>
+<circle cx="0" cy="0" fill="#434933" r="1.5"></circle>
+</pattern>
+<lineargradient id="cyan-gradient" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#2fd9f4" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#2fd9f4" stop-opacity="1"></stop>
+</lineargradient>
+<lineargradient id="chaser-gradient" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#c7003a" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#ffb3b6" stop-opacity="1"></stop>
+</lineargradient>
+</defs>
+<rect fill="url(#tactical-grid)" height="100%" width="100%"></rect>
+<!-- Topographic Street Silhouettes -->
+<path d="M-10 140 Q 120 180, 210 120 T 420 160" fill="none" stroke="#2a2a2a" stroke-linecap="round" stroke-width="12"></path>
+<path d="M60 -20 Q 90 140, 160 260 T 220 400" fill="none" stroke="#2a2a2a" stroke-linecap="round" stroke-width="8"></path>
+<path d="M220 40 L 380 340" fill="none" stroke="#201f1f" stroke-width="16"></path>
+<!-- Chaser Intercept Radar Sweep Arc -->
+<path d="M 270 190 A 70 70 0 0 1 340 260" fill="none" opacity="0.6" stroke="#c7003a" stroke-dasharray="4 4" stroke-width="1.5"></path>
+<line stroke="#c7003a" stroke-dasharray="2 2" stroke-width="1" x1="270" x2="310" y1="190" y2="240"></line>
+<!-- RUNNER 1 PATH (@SHADOW_RUNNER - Cyan) -->
+<path d="M 40 80 Q 90 120 140 100 T 210 170 T 260 250" fill="none" id="path-runner-1" stroke="#2fd9f4" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+<!-- RUNNER 2 PATH (@CIPHER_88 - Acid Lime) -->
+<path d="M 60 290 Q 110 240 180 260 T 310 210" fill="none" id="path-runner-2" stroke="#bef500" stroke-dasharray="6 3" stroke-linecap="round" stroke-width="2.5"></path>
+<!-- CHASER 1 PATH (@KRONOS_9 - Crimson) -->
+<path d="M 330 60 Q 290 110 280 180 T 262 248" fill="none" id="path-chaser-1" stroke="#c7003a" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5"></path>
+<!-- Intercept Point Flare Marker -->
+<circle class="animate-ping" cx="260" cy="250" fill="#c7003a" fill-opacity="0.3" r="10"></circle>
+</svg>
+<!-- Top Map HUD Telemetry Overlay -->
+<div class="relative z-10 flex items-center justify-between">
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-high/90 backdrop-blur">
+<span class="material-symbols-outlined text-[14px] text-tertiary-fixed-dim">explore</span>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface">40°47'12"N 73°58'04"W</span>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 rounded bg-surface-container-high/90">
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant">GRID:</span>
+<span class="font-label-mono-sm text-label-mono-sm text-primary-fixed">SECTOR_07</span>
+</div>
+</div>
+<!-- Active Event Floating Pin / Callout -->
+<div class="relative z-10 self-center max-w-[280px] bg-surface-container-high rounded-lg p-2.5 shadow-2xl transition-transform hover:scale-105 cursor-pointer">
+<div class="flex items-start gap-2">
+<div class="w-6 h-6 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[14px] text-on-surface font-bold">radar</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-mono-sm text-label-mono-sm text-secondary font-bold">14:22 TAG EVENT</span>
+<span class="w-1.5 h-1.5 rounded-full bg-secondary-container"></span>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant">PROX 0.8M</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface font-medium truncate">@KRONOS_9 neutralised @NEON_HARE</span>
+</div>
+</div>
+<!-- Triangle Indicator pointing to event -->
+<div class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-surface-container-high rotate-45"></div>
+</div>
+<!-- Map Tactile HUD Interactive Tokens (Key Locations) -->
+<div class="relative z-10 flex items-end justify-between">
+<!-- Spawn Anchor -->
+<div class="flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high/80">
+<span class="material-symbols-outlined text-[13px] text-tertiary-fixed-dim">trip_origin</span>
+<span class="font-label-mono-sm text-label-mono-sm text-tertiary-fixed-dim">LZ ALPHA</span>
+</div>
+<!-- Playhead Live Target Cursor Indicator -->
+<div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-container-lowest">
+<span class="w-2.5 h-2.5 rounded-full bg-primary-fixed animate-bounce"></span>
+<span class="font-label-mono-sm text-label-mono-sm text-primary-fixed uppercase tracking-wider">CURSOR: T+34:12</span>
+</div>
+<!-- Tagged Skull Beacon Status -->
+<div class="flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container/90 text-on-surface">
+<span class="material-symbols-outlined text-[13px]">skull</span>
+<span class="font-label-mono-sm text-label-mono-sm uppercase font-bold">ELIM #04</span>
+</div>
+</div>
+</div>
+<!-- Timeline & Playback Controller Drawer -->
+<div class="flex flex-col p-4 rounded-xl bg-surface-container-low space-y-4">
+<!-- Scrubber Bar Container -->
+<div class="flex flex-col space-y-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="font-label-mono-lg text-label-mono-lg text-primary-fixed" id="playhead-timer">34:12</span>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant">/</span>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant">58:40</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary-fixed">slow_motion_video</span>
+<span class="font-label-mono-sm text-label-mono-sm text-primary-fixed uppercase">SYNCED GPX</span>
+</div>
+</div>
+<!-- Scrubber Track with Event Markers -->
+<div class="relative w-full h-7 flex items-center cursor-pointer group" id="scrubber-bar">
+<!-- Background Track -->
+<div class="w-full h-2 rounded-full bg-surface-container-highest relative overflow-hidden">
+<!-- Buffered Track Segment -->
+<div class="absolute left-0 top-0 bottom-0 w-[78%] bg-surface-bright rounded-full"></div>
+<!-- Played Portion (Acid Lime) -->
+<div class="absolute left-0 top-0 bottom-0 w-[58.2%] bg-primary-fixed rounded-full" id="played-bar"></div>
+</div>
+<!-- Event Keyframe Tick Markers -->
+<div class="absolute inset-x-0 h-2 pointer-events-none">
+<!-- Zone Shrink @ 10:00 (17%) -->
+<span class="absolute top-0 bottom-0 w-1 bg-surface-dim left-[17%]" title="Zone Collapse 1"></span>
+<!-- Tag 1 @ 14:22 (24.5%) -->
+<span class="absolute -top-1 w-2 h-4 rounded-xs bg-secondary left-[24.5%]" title="Tag Event #1"></span>
+<!-- Sprint Burst @ 26:15 (44.7%) -->
+<span class="absolute top-0 bottom-0 w-1 bg-tertiary-fixed-dim left-[44.7%]" title="Sprint Activated"></span>
+<!-- Zone Shrink @ 40:00 (68.2%) -->
+<span class="absolute top-0 bottom-0 w-1 bg-surface-dim left-[68.2%]" title="Zone Collapse 2"></span>
+<!-- Tag 2 @ 52:10 (88.9%) -->
+<span class="absolute -top-1 w-2 h-4 rounded-xs bg-secondary-container left-[88.9%]" title="Tag Event #2"></span>
+</div>
+<!-- Draggable Playhead Thumb -->
+<div class="absolute left-[58.2%] -translate-x-1/2 w-5 h-5 rounded-full bg-primary-fixed shadow-md flex items-center justify-center cursor-grab active:cursor-grabbing" id="scrubber-thumb">
+<div class="w-2 h-2 rounded-full bg-surface-container-lowest"></div>
+</div>
+</div>
+</div>
+<!-- Playback Controls Row & Speed Selector -->
+<div class="flex items-center justify-between pt-1">
+<!-- Speed Selector Pills -->
+<div class="flex items-center p-1 rounded-lg bg-surface-container-high gap-1" id="speed-selector">
+<button class="px-2.5 py-1 rounded font-label-mono-sm text-label-mono-sm text-on-surface-variant hover:text-on-surface transition-colors" data-speed="1">1x</button>
+<button class="px-2.5 py-1 rounded font-label-mono-sm text-label-mono-sm bg-primary-fixed text-on-primary-fixed font-bold shadow" data-speed="2">2x</button>
+<button class="px-2.5 py-1 rounded font-label-mono-sm text-label-mono-sm text-on-surface-variant hover:text-on-surface transition-colors" data-speed="4">4x</button>
+<button class="px-2.5 py-1 rounded font-label-mono-sm text-label-mono-sm text-on-surface-variant hover:text-on-surface transition-colors" data-speed="8">8x</button>
+</div>
+<!-- Main Controls -->
+<div class="flex items-center gap-3">
+<!-- Skip Back 15s -->
+<button aria-label="Skip backward 15 seconds" class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface hover:text-primary-fixed active:scale-95 transition-all" id="btn-rewind">
+<span class="material-symbols-outlined text-[20px]">replay_10</span>
+</button>
+<!-- Prominent Play/Pause Toggle -->
+<button aria-label="Toggle Playback" class="w-13 h-13 min-w-[52px] min-h-[52px] rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed shadow-lg hover:brightness-110 active:scale-95 transition-all" id="btn-play">
+<span class="material-symbols-outlined text-[28px] font-bold" id="play-icon">play_arrow</span>
+</button>
+<!-- Skip Forward 15s -->
+<button aria-label="Skip forward 15 seconds" class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface hover:text-primary-fixed active:scale-95 transition-all" id="btn-forward">
+<span class="material-symbols-outlined text-[20px]">forward_10</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Operative Trail Filter & Legend Section -->
+<div class="flex flex-col space-y-2.5">
+<div class="flex items-center justify-between px-1">
+<h2 class="font-headline-sm text-headline-sm uppercase text-on-surface tracking-wider">Operative Telemetry Trails</h2>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant">3 / 4 VISIBLE</span>
+</div>
+<!-- Filter Toggle Pills -->
+<div class="grid grid-cols-2 gap-2">
+<!-- Operative 1: Shadow Runner -->
+<label class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container cursor-pointer select-none transition-colors hover:bg-surface-container-high">
+<input checked="" class="sr-only peer" id="filter-runner-1" type="checkbox"/>
+<div class="w-3.5 h-3.5 rounded-full bg-tertiary-fixed-dim ring-2 ring-transparent peer-checked:ring-offset-1 peer-checked:ring-offset-surface peer-checked:ring-tertiary-fixed-dim transition-all"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface truncate">@SHADOW_RUNNER</span>
+<span class="font-body-sm text-body-sm text-tertiary-fixed-dim">Runner • Cyan</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-tertiary-fixed-dim ml-auto opacity-100 peer-checked:block">visibility</span>
+</label>
+<!-- Operative 2: Kronos_9 -->
+<label class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container cursor-pointer select-none transition-colors hover:bg-surface-container-high">
+<input checked="" class="sr-only peer" id="filter-chaser-1" type="checkbox"/>
+<div class="w-3.5 h-3.5 rounded-full bg-secondary-container ring-2 ring-transparent peer-checked:ring-offset-1 peer-checked:ring-offset-surface peer-checked:ring-secondary-container transition-all"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface truncate">@KRONOS_9</span>
+<span class="font-body-sm text-body-sm text-secondary">Chaser • Red</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-secondary ml-auto opacity-100 peer-checked:block">visibility</span>
+</label>
+<!-- Operative 3: Cipher_88 -->
+<label class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container cursor-pointer select-none transition-colors hover:bg-surface-container-high">
+<input checked="" class="sr-only peer" id="filter-runner-2" type="checkbox"/>
+<div class="w-3.5 h-3.5 rounded-full bg-primary-fixed ring-2 ring-transparent peer-checked:ring-offset-1 peer-checked:ring-offset-surface peer-checked:ring-primary-fixed transition-all"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface truncate">@CIPHER_88</span>
+<span class="font-body-sm text-body-sm text-primary-fixed">Runner • Lime</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-primary-fixed ml-auto opacity-100 peer-checked:block">visibility</span>
+</label>
+<!-- Operative 4: Apex Hunter (Unchecked) -->
+<label class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container-low opacity-60 cursor-pointer select-none transition-colors hover:opacity-90 hover:bg-surface-container">
+<input class="sr-only peer" id="filter-chaser-2" type="checkbox"/>
+<div class="w-3.5 h-3.5 rounded-full bg-surface-variant ring-0 peer-checked:bg-secondary-container transition-all"></div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant truncate">@APEX_HUNTER</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Chaser • Red</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant ml-auto">visibility_off</span>
+</label>
+</div>
+</div>
+<!-- Locked / Archive Review Status Callout Card -->
+<div class="flex items-center justify-between p-3.5 rounded-xl bg-surface-container-high">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px] text-primary-fixed">lock_open</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm uppercase text-on-surface">Tactical 3D Replay</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Full telemetry unlocked for archive review</span>
+</div>
+</div>
+<span class="px-2 py-1 rounded bg-surface-container-lowest font-label-mono-sm text-label-mono-sm text-primary-fixed uppercase font-bold">PRO ARCHIVE</span>
+</div>
+<!-- Primary Export GPX Action Button -->
+<button class="w-full h-[52px] rounded-xl bg-primary-fixed text-on-primary-fixed font-body-lg text-body-lg uppercase font-bold flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-transform">
+<span class="material-symbols-outlined text-[20px] font-bold">download</span>
+<span>Export Match Route GPX / Share Telemetry</span>
+</button>
+</div>
+<script>
+  // Simple interactive micro-interactions for scrubbing & play state
+  (function() {
+    let isPlaying = false;
+    const playBtn = document.getElementById('btn-play');
+    const playIcon = document.getElementById('play-icon');
+    const speedButtons = document.querySelectorAll('#speed-selector button');
+
+    if (playBtn && playIcon) {
+      playBtn.addEventListener('click', function() {
+        isPlaying = !isPlaying;
+        playIcon.textContent = isPlaying ? 'pause' : 'play_arrow';
+      });
+    }
+
+    speedButtons.forEach(btn => {
+      btn.addEventListener('click', function() {
+        speedButtons.forEach(b => {
+          b.className = 'px-2.5 py-1 rounded font-label-mono-sm text-label-mono-sm text-on-surface-variant hover:text-on-surface transition-colors';
+        });
+        btn.className = 'px-2.5 py-1 rounded font-label-mono-sm text-label-mono-sm bg-primary-fixed text-on-primary-fixed font-bold shadow';
+      });
+    });
+
+    // Trail toggles visual state feedback
+    const filters = ['filter-runner-1', 'filter-chaser-1', 'filter-runner-2', 'filter-chaser-2'];
+    filters.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', function() {
+          const parent = el.closest('label');
+          const eye = parent.querySelector('.material-symbols-outlined');
+          if (el.checked) {
+            parent.classList.remove('opacity-60', 'bg-surface-container-low');
+            parent.classList.add('bg-surface-container');
+            if (eye) eye.textContent = 'visibility';
+          } else {
+            parent.classList.add('opacity-60', 'bg-surface-container-low');
+            parent.classList.remove('bg-surface-container');
+            if (eye) eye.textContent = 'visibility_off';
+          }
+        });
+      }
+    });
+  })();
+</script></main></body></html>

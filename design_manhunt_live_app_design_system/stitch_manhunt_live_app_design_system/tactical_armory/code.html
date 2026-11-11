@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-surface": "#e5e2e1", "surface": "#131313", "surface-container-lowest": "#0e0e0e", "on-secondary": "#68001a", "surface-bright": "#3a3939", "on-secondary-container": "#ffd7d7", "surface-container-high": "#2a2a2a", "on-secondary-fixed": "#40000c", "primary-fixed-dim": "#a6d700", "surface-container": "#201f1f", "on-error": "#690005", "on-secondary-fixed-variant": "#920028", "secondary-fixed": "#ffdada", "inverse-on-surface": "#313030", "surface-variant": "#353534", "on-tertiary": "#00363e", "on-surface-variant": "#c3caac", "secondary-container": "#c7003a", "tertiary-fixed": "#a2eeff", "background": "#131313", "error-container": "#93000a", "outline-variant": "#434933", "on-background": "#e5e2e1", "on-primary-fixed-variant": "#3a4d00", "on-tertiary-container": "#006f7e", "inverse-surface": "#e5e2e1", "surface-container-low": "#1c1b1b", "on-tertiary-fixed-variant": "#004e5a", "primary-container": "#bef500", "outline": "#8d9479", "on-primary": "#273500", "primary": "#ffffff", "tertiary-fixed-dim": "#2fd9f4", "surface-dim": "#131313", "tertiary": "#ffffff", "inverse-primary": "#4e6700", "on-primary-fixed": "#151f00", "secondary": "#ffb3b6", "on-primary-container": "#536d00", "on-error-container": "#ffdad6", "error": "#ffb4ab", "tertiary-container": "#a2eeff", "surface-tint": "#a6d700", "primary-fixed": "#bef500", "secondary-fixed-dim": "#ffb3b6", "surface-container-highest": "#353534", "on-tertiary-fixed": "#001f25" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin": "1.5rem", "space-lg": "1.5rem", "space-xs": "0.25rem", "gutter": "1rem", "space-xl": "2rem", "space-sm": "0.5rem", "space-md": "1rem" }, "fontFamily": { "body-sm": ["Inter"], "label-mono-lg": ["JetBrains Mono"], "display-hero-mobile": ["Anton"], "headline-sm": ["Anton"], "display-hero": ["Anton"], "body-lg": ["Inter"], "headline-lg": ["Anton"], "label-mono-md": ["JetBrains Mono"], "headline-md": ["Anton"], "label-mono-sm": ["JetBrains Mono"], "body-md": ["Inter"] }, "fontSize": { "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-mono-lg": ["18px", { "lineHeight": "22px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "display-hero-mobile": ["36px", { "lineHeight": "40px", "letterSpacing": "0.02em", "fontWeight": "400" }], "headline-sm": ["20px", { "lineHeight": "24px", "letterSpacing": "0.04em", "fontWeight": "400" }], "display-hero": ["44px", { "lineHeight": "48px", "letterSpacing": "0.02em", "fontWeight": "400" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }], "headline-lg": ["32px", { "lineHeight": "36px", "letterSpacing": "0.03em", "fontWeight": "400" }], "label-mono-md": ["14px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500" }], "headline-md": ["24px", { "lineHeight": "28px", "letterSpacing": "0.03em", "fontWeight": "400" }], "label-mono-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "500" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen selection:bg-secondary-container selection:text-on-secondary-container"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><button aria-label="Back" class="min-w-[44px] min-h-[44px] flex items-center gap-space-xs text-on-surface-variant hover:text-on-surface transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[20px]">arrow_back</span></button><h1 class="font-headline-sm text-headline-sm tracking-wider uppercase text-on-surface">Tactical Armory / Shop</h1></div><div class="flex items-center gap-space-sm"><div class="flex items-center gap-1.5 h-7 px-3 rounded-full bg-surface-container-high text-primary-fixed"><span class="material-symbols-outlined text-[16px]">token</span><span class="font-label-mono-sm text-label-mono-sm font-bold tracking-wider">4,850 CR</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 px-margin bg-surface pb-safe flex-1"><div class="flex flex-col w-full pb-8 space-y-4">
+<!-- Currency Header Strip -->
+<section class="w-full bg-surface-container-low rounded-xl p-3 flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-3">
+<!-- Tactical Credits -->
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary-fixed text-[20px]" style="font-variation-settings: 'FILL' 1;">toll</span>
+<div class="flex flex-col">
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant leading-none">TACTICAL CR</span>
+<span class="font-label-mono-md text-label-mono-md text-primary-fixed font-bold leading-tight">4,850</span>
+</div>
+</div>
+<!-- Separator block -->
+<div class="w-1 h-6 bg-surface-container-highest rounded-full"></div>
+<!-- Quantum Cores -->
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-[20px]" style="font-variation-settings: 'FILL' 1;">deployed_code</span>
+<div class="flex flex-col">
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant leading-none">CORES</span>
+<span class="font-label-mono-md text-label-mono-md text-tertiary-fixed-dim font-bold leading-tight">12</span>
+</div>
+</div>
+</div>
+<!-- Quick Top-Up Action -->
+<button class="flex items-center gap-1 bg-surface-container-high hover:bg-surface-bright active:scale-95 text-on-surface px-2.5 py-1.5 rounded-lg transition-transform" onclick="triggerToast('TOP-UP TERMINAL: CONNECTING SECURE GATEWAY...')">
+<span class="material-symbols-outlined text-primary-fixed text-[16px]">add</span>
+<span class="font-label-mono-sm text-label-mono-sm tracking-wider font-bold">TOP UP</span>
+</button>
+</section>
+<!-- Limited Time Event Drop Banner -->
+<section class="relative w-full rounded-xl bg-surface-container-low overflow-hidden shadow-md">
+<div class="relative w-full h-48 bg-cover bg-center" data-alt="Dark gritty tactical urban manhunt ghillie operative clad in matte charcoal mesh fibers and acid lime telemetry harness hiding in asphalt shadows under neon street lamps in a rain slicked alley." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDnbTR8JN5aWo8y9bkcSsU48QYYZJ2d0ZVDOqJuwW1sXjkkSbRDZfPxbR7TErks03BECO4H-rHwwffJ_FH28Dr2P-8mq0XCD0ePuC0fKhwBtZ9Dug05Zg2lsvLkOUx7QBsmQw7CbtSf0FczdtxKHPQ5KkmJynptOGszbZv3VUyWc7q9YUABFa5pnvbSslWulIfqEiXApjS1Wygu3mCFOzfvldvQc4HX_JN76m4FtXM')">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/70 to-transparent p-4 flex flex-col justify-between">
+<!-- Top banner tags -->
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center gap-1 bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full font-label-mono-sm text-label-mono-sm tracking-wider font-bold">
+<span class="material-symbols-outlined text-[13px]">timer</span> 4D 18H LEFT
+          </span>
+<span class="bg-surface-container-highest text-primary-fixed font-label-mono-sm text-label-mono-sm px-2 py-0.5 rounded tracking-widest uppercase">
+            EVENT DROP 03
+          </span>
+</div>
+<!-- Banner bottom title & call to action -->
+<div class="space-y-2">
+<div class="flex items-baseline justify-between">
+<div>
+<p class="font-label-mono-sm text-label-mono-sm text-on-surface-variant uppercase tracking-wider">SPECIAL OPS BUNDLE</p>
+<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tight">CYBER-STALKER GHILLIE SUIT</h2>
+</div>
+<div class="text-right">
+<span class="font-label-mono-lg text-label-mono-lg text-primary-fixed block font-bold">1,200 CR</span>
+</div>
+</div>
+<div class="flex items-center gap-2 pt-1">
+<button class="flex-1 h-11 bg-primary-fixed hover:bg-primary-fixed-dim text-on-primary-fixed font-body-lg text-body-lg font-bold rounded-lg uppercase tracking-wider flex items-center justify-center gap-2 active:scale-95 transition-transform" onclick="triggerToast('INSPECTING BUNDLE: CYBER-STALKER')">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+              INSPECT DROP
+            </button>
+<button aria-label="Share drop" class="h-11 px-3 bg-surface-container-high text-on-surface hover:bg-surface-bright rounded-lg active:scale-95 transition-transform flex items-center justify-center" onclick="triggerToast('LINK COPIED TO COMS CHANNEL')">
+<span class="material-symbols-outlined text-[18px]">share</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Category Filter Horizontal Scroll -->
+<nav aria-label="Armory categories" class="w-full overflow-x-auto no-scrollbar py-1">
+<div class="flex items-center gap-2 min-w-max">
+<button class="px-3.5 py-1.5 rounded-full font-label-mono-sm text-label-mono-sm uppercase tracking-wider bg-surface-container text-on-surface-variant hover:text-on-surface" onclick="setFilter(this, 'ALL')">
+        ALL
+      </button>
+<button class="px-3.5 py-1.5 rounded-full font-label-mono-sm text-label-mono-sm uppercase tracking-wider bg-primary-fixed text-on-primary-fixed font-bold shadow-sm" onclick="setFilter(this, 'RADAR')">
+        RADAR SKINS
+      </button>
+<button class="px-3.5 py-1.5 rounded-full font-label-mono-sm text-label-mono-sm uppercase tracking-wider bg-surface-container text-on-surface-variant hover:text-on-surface" onclick="setFilter(this, 'TRAILS')">
+        GPS TRAILS
+      </button>
+<button class="px-3.5 py-1.5 rounded-full font-label-mono-sm text-label-mono-sm uppercase tracking-wider bg-surface-container text-on-surface-variant hover:text-on-surface" onclick="setFilter(this, 'BADGES')">
+        CALLSIGN BADGES
+      </button>
+<button class="px-3.5 py-1.5 rounded-full font-label-mono-sm text-label-mono-sm uppercase tracking-wider bg-surface-container text-on-surface-variant hover:text-on-surface" onclick="setFilter(this, 'GEAR')">
+        TACTICAL GEAR
+      </button>
+</div>
+</nav>
+<!-- Armory Item Showcase Feed -->
+<div class="space-y-3 w-full" id="armory-grid">
+<!-- Item 1: Pulse Echo Radar -->
+<article class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-3 shadow-sm">
+<div class="flex gap-3 items-center">
+<!-- Visualizer Radar Animation Preview -->
+<div class="relative w-20 h-20 rounded-lg bg-surface-container-lowest flex items-center justify-center overflow-hidden shrink-0">
+<svg class="w-16 h-16" fill="none" viewbox="0 0 100 100">
+<circle class="animate-spin" cx="50" cy="50" opacity="0.3" r="42" stroke="#bef500" stroke-dasharray="4 3" stroke-width="1.5" style="animation-duration: 16s;"></circle>
+<circle cx="50" cy="50" opacity="0.6" r="30" stroke="#bef500" stroke-width="1.5"></circle>
+<circle cx="50" cy="50" opacity="0.9" r="16" stroke="#bef500" stroke-width="2"></circle>
+<circle cx="50" cy="50" fill="#bef500" r="4"></circle>
+<line opacity="0.8" stroke="#bef500" stroke-linecap="round" stroke-width="2" x1="50" x2="80" y1="50" y2="20"></line>
+</svg>
+<div class="absolute top-1 left-1">
+<span class="bg-surface-bright/80 font-label-mono-sm text-[9px] px-1 rounded text-primary-fixed uppercase font-bold">RADAR</span>
+</div>
+</div>
+<!-- Meta Details -->
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1.5 mb-0.5">
+<span class="font-label-mono-sm text-[10px] px-1.5 py-0.5 rounded bg-secondary-container/30 text-secondary uppercase font-bold tracking-wider">EPIC</span>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant uppercase truncate">SWEEP PATTERN</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface uppercase truncate">PULSE ECHO RADAR</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">Tactical lime radial pulse wave replacement for runner tracker screen.</p>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-mono-md text-label-mono-md text-on-surface-variant font-bold">OWNED</span>
+<button class="h-10 px-5 bg-surface-container-highest hover:bg-surface-bright text-primary-fixed font-body-md text-body-md font-bold rounded-lg uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-transform" onclick="triggerEquip(this, 'PULSE ECHO RADAR')">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+          EQUIP
+        </button>
+</div>
+</article>
+<!-- Item 2: Ghost Trace GPS Trail -->
+<article class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-3 shadow-sm">
+<div class="flex gap-3 items-center">
+<!-- Visual Preview -->
+<div class="relative w-20 h-20 rounded-lg bg-surface-container-lowest flex items-center justify-center overflow-hidden shrink-0">
+<div class="w-full h-full bg-cover bg-center" data-alt="Cyberpunk high contrast aerial map display featuring dynamic smoky white vapor GPS runner path tracing dark grid streets in extreme minimalist graphic styling." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCHe3iW2fitoHaoXkDXJ6GMeLo6zxAb0MzO0JB0PsMWtb0vkgM9GoDaWF26c9XB0thTutJ2oFCO7IP5eID9oyrY6C-cs6IbIILASaarKXBfkPZXtAE4TQQaDcfnttGeNbTQAfQSMY0DqEH6pZ3AXVqD4Eh0pFMEl_UkpCSNK9bREda8A2js4xrilrSo6svhbhvuSN15z3GDccXMSomJ8ulaGNMgY9p_ZQQR6cRtO5o')"></div>
+<div class="absolute inset-0 bg-surface-container-lowest/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-[28px]">route</span>
+</div>
+</div>
+<!-- Meta Details -->
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1.5 mb-0.5">
+<span class="font-label-mono-sm text-[10px] px-1.5 py-0.5 rounded bg-tertiary-container/30 text-tertiary-fixed-dim uppercase font-bold tracking-wider">RARE</span>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant uppercase truncate">TRAIL FX</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface uppercase truncate">GHOST TRACE</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">Dissolving dense gray-white smoke vapor lingering behind runner path.</p>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary-fixed text-[16px]">toll</span>
+<span class="font-label-mono-md text-label-mono-md text-on-surface font-bold">500 CR</span>
+</div>
+<button class="h-10 px-5 bg-primary-fixed hover:bg-primary-fixed-dim text-on-primary-fixed font-body-md text-body-md font-bold rounded-lg uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-transform" onclick="triggerUnlock(this, 'GHOST TRACE', 500)">
+<span class="material-symbols-outlined text-[16px]">lock_open</span>
+          UNLOCK
+        </button>
+</div>
+</article>
+<!-- Item 3: Neon Vortex Avatar Insignia -->
+<article class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-3 shadow-sm">
+<div class="flex gap-3 items-center">
+<!-- Visual Preview -->
+<div class="relative w-20 h-20 rounded-lg bg-surface-container-lowest flex items-center justify-center overflow-hidden shrink-0">
+<div class="w-full h-full bg-cover bg-center" data-alt="Neon holographic spiral insignia emblem glowing vivid acid lime and tactical amber against deep void carbon fiber tile geometric manhunt badge." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCt6P9JcpRgsIqD7i5nutqnonE2v4LddRNZPgsm_R-LTkTPmksFm9ETRUaL9XYYDXpXW1vANdhPdX7tXQF6aODWswPKN4Hbfc3To1m8_-CdACmGCkXkibohazVAslH5wBeYZz-S7BqA3CgIvCKjHjZuzSRna5-UlnI4RtY96-tynnczdwHc_nznJlpRFasfCpiwUxogrUV6aO-Q5ncrA5Jqt_dQLQiwc27cngCI8uo')"></div>
+<div class="absolute inset-0 bg-surface-container-lowest/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-fixed text-[28px]">stars</span>
+</div>
+</div>
+<!-- Meta Details -->
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1.5 mb-0.5">
+<span class="font-label-mono-sm text-[10px] px-1.5 py-0.5 rounded bg-primary-container text-on-primary-container uppercase font-bold tracking-wider">LEGENDARY</span>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant uppercase truncate">AVATAR BADGE</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface uppercase truncate">NEON VORTEX AVATAR</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">Rotating dynamic holo-badge shown on leaderboard &amp; proximity alerts.</p>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary-fixed text-[16px]">toll</span>
+<span class="font-label-mono-md text-label-mono-md text-on-surface font-bold">1,500 CR</span>
+</div>
+<button class="h-10 px-5 bg-primary-fixed hover:bg-primary-fixed-dim text-on-primary-fixed font-body-md text-body-md font-bold rounded-lg uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-transform" onclick="triggerUnlock(this, 'NEON VORTEX AVATAR', 1500)">
+<span class="material-symbols-outlined text-[16px]">lock_open</span>
+          UNLOCK (1.5K CR)
+        </button>
+</div>
+</article>
+<!-- Item 4: Night Stalker HUD -->
+<article class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-3 shadow-sm">
+<div class="flex gap-3 items-center">
+<!-- Visual Preview -->
+<div class="relative w-20 h-20 rounded-lg bg-surface-container-lowest flex items-center justify-center overflow-hidden shrink-0">
+<div class="w-full h-full bg-cover bg-center" data-alt="High contrast monochromatic night vision satellite tactical GPS map overlay showing darkened road vectors and green laser coordinate grids." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDzn59YGpIlr2Zhzib45rCJcLKOSQmo0CIzN2OXpLhqWzU3wneqqYlx3ms48s-70zRRhQ2s6S7nwKnx8A-4NCUR1ZO7Dwph1B_sowp9RFNsR_ngxnkS_pfbQ9KYeem5zfkb-RsC9ulm51rNKCJ14tBxjvsmZv4COCwMQYHA2yAEwEQ-P-9Bkch9vApHsPyvMvhhsM8yWBPvnxXHWNLqY4XhoxN8J11uiIBxrSTG_Mc')"></div>
+<div class="absolute inset-0 bg-surface-container-lowest/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-[28px]">tune</span>
+</div>
+</div>
+<!-- Meta Details -->
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1.5 mb-0.5">
+<span class="font-label-mono-sm text-[10px] px-1.5 py-0.5 rounded bg-tertiary-container/30 text-tertiary-fixed-dim uppercase font-bold tracking-wider">RARE</span>
+<span class="font-label-mono-sm text-label-mono-sm text-on-surface-variant uppercase truncate">MAP SHADER</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface uppercase truncate">NIGHT STALKER HUD</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">Inverted high-contrast thermal night palette for cartography engine.</p>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary-fixed text-[16px]">toll</span>
+<span class="font-label-mono-md text-label-mono-md text-on-surface font-bold">650 CR</span>
+</div>
+<button class="h-10 px-5 bg-primary-fixed hover:bg-primary-fixed-dim text-on-primary-fixed font-body-md text-body-md font-bold rounded-lg uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-transform" onclick="triggerUnlock(this, 'NIGHT STALKER HUD', 650)">
+<span class="material-symbols-outlined text-[16px]">lock_open</span>
+          UNLOCK (650 CR)
+        </button>
+</div>
+</article>
+</div>
+<!-- Fair Play Regulatory Mandate Notice -->
+<section class="w-full bg-surface-container-lowest rounded-xl p-3.5 flex items-start gap-3 shadow-inner">
+<span class="material-symbols-outlined text-outline text-[20px] shrink-0 mt-0.5">verified_user</span>
+<div class="space-y-1">
+<h4 class="font-label-mono-sm text-label-mono-sm uppercase text-on-surface tracking-wider font-bold">
+        COSMETIC ONLY NOTICE // DIRECTIVE 07
+      </h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+        In accordance with Fair Play Directive 07, armory items do not alter GPS refresh rates, radar range, or real-world physical pursuit speed. Zero pay-to-win.
+      </p>
+</div>
+</section>
+<!-- Interactive Mini Toast Notification Pill -->
+<aside class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface-bright text-on-surface font-label-mono-sm text-label-mono-sm px-4 py-2 rounded-full shadow-lg opacity-0 pointer-events-none transition-opacity duration-200 z-50 flex items-center gap-2" id="toast-pill">
+<span class="material-symbols-outlined text-primary-fixed text-[16px]">info</span>
+<span id="toast-text">TRANSACTION COMPLETE</span>
+</aside>
+</div>
+<script>
+  function triggerToast(text) {
+    const toast = document.getElementById('toast-pill');
+    const toastText = document.getElementById('toast-text');
+    if (toast && toastText) {
+      toastText.textContent = text;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      clearTimeout(window.__toastTimeout);
+      window.__toastTimeout = setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2200);
+    }
+  }
+
+  function triggerEquip(button, name) {
+    const isEquipped = button.dataset.equipped === 'true';
+    if (!isEquipped) {
+      button.dataset.equipped = 'true';
+      button.innerHTML = '<span class="material-symbols-outlined text-[16px]">done_all</span> ACTIVE';
+      button.classList.add('bg-primary-fixed', 'text-on-primary-fixed');
+      button.classList.remove('bg-surface-container-highest', 'text-primary-fixed');
+      triggerToast('EQUIPPED: ' + name);
+    } else {
+      button.dataset.equipped = 'false';
+      button.innerHTML = '<span class="material-symbols-outlined text-[16px]">check_circle</span> EQUIP';
+      button.classList.remove('bg-primary-fixed', 'text-on-primary-fixed');
+      button.classList.add('bg-surface-container-highest', 'text-primary-fixed');
+      triggerToast('UNEQUIPPED: ' + name);
+    }
+  }
+
+  function triggerUnlock(button, name, cost) {
+    button.disabled = true;
+    button.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span> AUTHENTICATING...';
+    setTimeout(() => {
+      button.disabled = false;
+      button.innerHTML = '<span class="material-symbols-outlined text-[16px]">check_circle</span> EQUIP';
+      button.classList.remove('bg-primary-fixed', 'text-on-primary-fixed');
+      button.classList.add('bg-surface-container-highest', 'text-primary-fixed');
+      button.setAttribute('onclick', `triggerEquip(this, '${name}')`);
+      triggerToast('DECRYPTED & UNLOCKED: ' + name);
+    }, 600);
+  }
+
+  function setFilter(activeBtn, filter) {
+    const parent = activeBtn.parentElement;
+    const buttons = parent.querySelectorAll('button');
+    buttons.forEach(btn => {
+      btn.classList.remove('bg-primary-fixed', 'text-on-primary-fixed', 'font-bold');
+      btn.classList.add('bg-surface-container', 'text-on-surface-variant');
+    });
+    activeBtn.classList.remove('bg-surface-container', 'text-on-surface-variant');
+    activeBtn.classList.add('bg-primary-fixed', 'text-on-primary-fixed', 'font-bold');
+    triggerToast('FILTER: ' + filter);
+  }
+</script></main></body></html>

@@ -7,6 +7,7 @@ import { useAuthStore } from '../src/stores/authStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { useStatusStore } from '../src/stores/statusStore';
 import { SystemStatusOverlay } from '../src/components/SystemStatusOverlay';
+import '../src/services/backgroundLocation'; // defines the background GPS task at startup
 
 // Screens that can be opened without being logged in
 const PUBLIC_SEGMENTS = [undefined, 'splash', 'onboarding', 'auth', 'legal', 'dev'];

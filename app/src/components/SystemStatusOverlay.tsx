@@ -5,6 +5,7 @@ import { useConnectionStore, MAX_RECONNECT_ATTEMPTS } from '../stores/connection
 import { useLiveGameStore } from '../stores/liveGameStore';
 import { useLobbyStore } from '../stores/lobbyStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useTrackingStore } from '../stores/trackingStore';
 import { retryConnection } from '../services/socket';
 import { restartLocationTracking } from '../services/location';
 import { colors, typography, spacing, radii } from '../theme/theme';
@@ -56,6 +57,7 @@ export function SystemStatusOverlay() {
   const lowBatteryMode = useSettingsStore((s) => s.lowBatteryMode);
   const setSetting = useSettingsStore((s) => s.setSetting);
   const battery = useBatteryPercent();
+  const trackingMode = useTrackingStore((s) => s.mode);
 
   const banners: Banner[] = [];
 
@@ -67,6 +69,17 @@ export function SystemStatusOverlay() {
       text: failed ? 'Could not reconnect automatically.' : `Reconnecting (attempt ${Math.max(attempt, 1)}/${MAX_RECONNECT_ATTEMPTS})…`,
       tone: 'danger',
       action: { label: 'RETRY NOW', onPress: retryConnection },
+    });
+  }
+
+  if (inMatch && trackingMode === 'foreground') {
+    banners.push({
+      key: 'bg',
+      icon: '🔒',
+      title: 'TRACKING PAUSES WHEN SCREEN LOCKS',
+      text: 'Set location to "Allow all the time" so your position keeps updating.',
+      tone: 'warning',
+      action: { label: 'FIX PERMISSION', onPress: () => Linking.openSettings() },
     });
   }
 

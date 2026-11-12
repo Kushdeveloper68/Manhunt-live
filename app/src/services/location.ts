@@ -1,8 +1,9 @@
 import * as Location from 'expo-location';
-import { useLiveGameStore } from '../stores/liveGameStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useTrackingStore } from '../stores/trackingStore';
+import { BACKGROUND_LOCATION_TASK, applyLocation } from './backgroundLocation';
 
-let locationSubscription: Location.LocationSubscription | null = null;
+let foregroundSubscription: Location.LocationSubscription | null = null;
 
 /** GPS precision/battery trade-off comes from the user's settings. */
 function trackingOptions(): Location.LocationOptions {
@@ -13,12 +14,12 @@ function trackingOptions(): Location.LocationOptions {
 }
 
 export function isTrackingLocation(): boolean {
-  return locationSubscription !== null;
+  return useTrackingStore.getState().mode !== 'off';
 }
 
 /** Re-apply settings (e.g. low-battery mode toggled) to a running tracker. */
 export async function restartLocationTracking(): Promise<void> {
-  if (locationSubscription) await startLocationTracking();
+  if (isTrackingLocation()) await startLocationTracking();
 }
 
 export async function requestLocationPermissions(): Promise<boolean> {
@@ -30,52 +31,66 @@ export async function requestLocationPermissions(): Promise<boolean> {
 }
 
 /**
- * Starts adaptive GPS tracking.
- * Adjusts reporting interval based on player speed:
- * - Stationary (< 0.8 m/s): 10s interval
- * - Jogging (0.8 - 3.5 m/s): 5s interval
- * - Sprinting (> 3.5 m/s): 2s interval
+ * Starts GPS tracking for a match.
+ * - With "Allow all the time": a foreground service keeps tracking while the screen is locked.
+ * - Without it: falls back to tracking only while the app is open, and the UI warns about it.
  */
 export async function startLocationTracking(): Promise<boolean> {
   try {
-    const { status } = await Location.getForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      const granted = await requestLocationPermissions();
-      if (!granted) return false;
+    let fg = (await Location.getForegroundPermissionsAsync()).status;
+    if (fg !== 'granted') fg = (await Location.requestForegroundPermissionsAsync()).status;
+    if (fg !== 'granted') {
+      useTrackingStore.getState().setMode('off');
+      return false;
     }
 
-    if (locationSubscription) {
-      locationSubscription.remove();
-      locationSubscription = null;
-    }
+    let bg = (await Location.getBackgroundPermissionsAsync()).status;
+    if (bg !== 'granted') bg = (await Location.requestBackgroundPermissionsAsync()).status;
 
-    locationSubscription = await Location.watchPositionAsync(
-      trackingOptions(),
-      (loc) => {
-        const coords = {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        };
-        const speed = loc.coords.speed || 0;
-        const heading = loc.coords.heading || 0;
-        const isMock = (loc as any).mocked === true;
+    await stopLocationTracking(); // clean restart (also when settings change)
 
-        useLiveGameStore
-          .getState()
-          .updateLocation(coords, speed, heading, isMock, loc.coords.accuracy ?? undefined);
+    if (bg === 'granted') {
+      try {
+        await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+          ...trackingOptions(),
+          pausesUpdatesAutomatically: false,
+          showsBackgroundLocationIndicator: true,
+          activityType: Location.ActivityType.Fitness,
+          foregroundService: {
+            notificationTitle: 'MANHUNT LIVE: match active',
+            notificationBody: 'Sharing your location with your game. Open the app to leave.',
+            notificationColor: '#C6FF00',
+            killServiceOnDestroy: true, // swiping the app away stops tracking
+          },
+        });
+        useTrackingStore.getState().setMode('background');
+        return true;
+      } catch (err) {
+        console.warn('[location] background tracking unavailable, using foreground only:', err);
       }
-    );
+    }
 
+    foregroundSubscription = await Location.watchPositionAsync(trackingOptions(), applyLocation);
+    useTrackingStore.getState().setMode('foreground');
     return true;
   } catch (err) {
-    console.warn('Error initiating location watch:', err);
+    console.warn('Error initiating location tracking:', err);
+    useTrackingStore.getState().setMode('off');
     return false;
   }
 }
 
-export function stopLocationTracking(): void {
-  if (locationSubscription) {
-    locationSubscription.remove();
-    locationSubscription = null;
+export async function stopLocationTracking(): Promise<void> {
+  if (foregroundSubscription) {
+    foregroundSubscription.remove();
+    foregroundSubscription = null;
   }
+  try {
+    if (await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)) {
+      await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    }
+  } catch {
+    /* task not registered */
+  }
+  useTrackingStore.getState().setMode('off');
 }

@@ -2,8 +2,10 @@ import { Server } from 'socket.io';
 import { z } from 'zod';
 import { SOCKET_EVENTS, LivePlayerLocation } from '@manhunt/shared';
 import { gameStateStore } from '../game/gameStateStore.js';
-import { isImpossibleSpeedJump } from '../game/math.js';
+import { isImpossibleSpeedJump, haversineDistance } from '../game/math.js';
+import { plausibleStepMeters } from '../game/matchSummary.js';
 import { canReceiveLiveLocation } from '../game/visibility.js';
+import { emitToUser } from './emit.js';
 import { AuthenticatedSocket } from './auth.js';
 import { logger } from '../logger.js';
 
@@ -76,9 +78,33 @@ export function registerLocationHandlers(io: Server, socket: AuthenticatedSocket
         );
       }
 
+      // Distance covered (for km stats): only plausible steps count
+      if (prevLocation && state.status === 'running') {
+        const step = plausibleStepMeters(
+          haversineDistance(prevLocation.coordinates, newLocation.coordinates),
+          now - (prevLocation.receivedAt ?? prevLocation.timestamp),
+          newLocation.isMock,
+          newLocation.accuracy
+        );
+        if (step > 0) {
+          const dist = (state.distanceMeters ??= new Map());
+          dist.set(user.userId, (dist.get(user.userId) ?? 0) + step);
+        }
+      }
+
       // 4. Update GameStateStore
       state.locations.set(user.userId, newLocation);
       await gameStateStore.set(data.gameId, state);
+
+      // While a player's SOS is active, stream their live position to the HOST only
+      if (state.activeSos?.has(user.userId) && state.hostId !== user.userId) {
+        emitToUser(io, data.gameId, state.hostId, SOCKET_EVENTS.SOS_LOCATION, {
+          userId: user.userId,
+          username: player.username,
+          coordinates: newLocation.coordinates,
+          timestamp: now,
+        });
+      }
 
       // 5. Visibility delivery: Send live location ONLY to teammates
       const roomName = `game:${data.gameId}`;

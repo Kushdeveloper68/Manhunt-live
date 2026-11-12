@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Vibration } from 'react-native';
 import {
   GameStateSync,
   LivePlayerLocation,
@@ -6,6 +7,7 @@ import {
   RunnerSnapshot,
   ZoneSettings,
   GamePlayer,
+  MatchSummary,
   SOCKET_EVENTS,
 } from '@manhunt/shared';
 import { getSocket, isSocketConnected } from '../services/socket';
@@ -30,7 +32,9 @@ interface LiveGameStateProps {
   runnerSnapshots: RunnerSnapshot[];
   players: GamePlayer[];
   zoneViolation: { distanceOutsideMeters: number; penalty: string } | null;
-  matchEnd: { winnerRole: string; reason: string } | null;
+  matchEnd: { winnerRole: string; reason: string; summary?: MatchSummary } | null;
+  /** Host only: players whose SOS is currently active */
+  incomingSos: Record<string, { userId: string; username: string; coordinates: { latitude: number; longitude: number } | null; timestamp: number }>;
   exposedAlert: boolean;
   compassHeading: number;
   pendingTagAttempt: {
@@ -74,6 +78,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
   players: [],
   zoneViolation: null,
   matchEnd: null,
+      incomingSos: {},
   exposedAlert: false,
   compassHeading: 12,
   pendingTagAttempt: null,
@@ -98,6 +103,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
       runnerSnapshots: initialState.runnerSnapshots || [],
       players: initialState.players || [],
       matchEnd: null,
+      incomingSos: {},
     });
 
     if (isSocketConnected()) {
@@ -213,10 +219,32 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
 
       // Listen for game end
       socket.off(SOCKET_EVENTS.GAME_END);
-      socket.on(SOCKET_EVENTS.GAME_END, (data: { winningRole: string; reason: string }) => {
+      socket.on(SOCKET_EVENTS.GAME_END, (data: { winningRole: string; reason: string; summary?: MatchSummary }) => {
         set({
           status: 'ended',
-          matchEnd: { winnerRole: data.winningRole, reason: data.reason },
+          matchEnd: { winnerRole: data.winningRole, reason: data.reason, summary: data.summary },
+        });
+      });
+
+      // SOS alerts (only the host receives these from the server)
+      socket.off(SOCKET_EVENTS.SOS_TRIGGER);
+      socket.on(SOCKET_EVENTS.SOS_TRIGGER, (d: { userId: string; username: string; coordinates: { latitude: number; longitude: number } | null; timestamp: number }) => {
+        Vibration.vibrate([300, 200, 300, 200, 300]);
+        set((st) => ({ incomingSos: { ...st.incomingSos, [d.userId]: d } }));
+      });
+      socket.off(SOCKET_EVENTS.SOS_LOCATION);
+      socket.on(SOCKET_EVENTS.SOS_LOCATION, (d: { userId: string; coordinates: { latitude: number; longitude: number }; timestamp: number }) => {
+        set((st) => {
+          const prev = st.incomingSos[d.userId];
+          if (!prev) return st;
+          return { incomingSos: { ...st.incomingSos, [d.userId]: { ...prev, coordinates: d.coordinates, timestamp: d.timestamp } } };
+        });
+      });
+      socket.off(SOCKET_EVENTS.SOS_RESOLVED);
+      socket.on(SOCKET_EVENTS.SOS_RESOLVED, (d: { userId: string }) => {
+        set((st) => {
+          const { [d.userId]: _removed, ...rest } = st.incomingSos;
+          return { incomingSos: rest };
         });
       });
     }
@@ -265,6 +293,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
       players: [],
       zoneViolation: null,
       matchEnd: null,
+      incomingSos: {},
       exposedAlert: false,
       pendingTagAttempt: null,
       eliminatedData: null,

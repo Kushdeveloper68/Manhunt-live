@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,13 @@ import {
   SafeAreaView,
   ScrollView,
   Pressable,
+  Alert,
+  Linking,
+  Platform,
 } from 'react-native';
+import * as Location from 'expo-location';
+import { requestLocationPermissions } from '../../src/services/location';
+import { registerForPushNotifications } from '../../src/services/push';
 import { useRouter } from 'expo-router';
 import { colors, spacing, radii, typography } from '../../src/theme/theme';
 import { Button } from '../../src/components/Button';
@@ -14,12 +20,72 @@ import { Button } from '../../src/components/Button';
 export default function PermissionsScreen() {
   const router = useRouter();
 
-  const [locationAllowed, setLocationAllowed] = useState(true);
+  const [locationAllowed, setLocationAllowed] = useState(false);
   const [notificationsAllowed, setNotificationsAllowed] = useState(false);
   const [batteryAllowed, setBatteryAllowed] = useState(false);
 
+  // Show what is REALLY granted right now
+  useEffect(() => {
+    (async () => {
+      try {
+        const fg = await Location.getForegroundPermissionsAsync();
+        const bg = await Location.getBackgroundPermissionsAsync();
+        setLocationAllowed(fg.status === 'granted' && bg.status === 'granted');
+      } catch {
+        /* leave as not allowed */
+      }
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Notifications = require('expo-notifications');
+        setNotificationsAllowed((await Notifications.getPermissionsAsync()).status === 'granted');
+      } catch {
+        /* notifications module unavailable in this build */
+      }
+    })();
+  }, []);
+
+  const requestLocation = async () => {
+    const ok = await requestLocationPermissions();
+    setLocationAllowed(ok);
+    if (!ok) {
+      Alert.alert(
+        'Location needed',
+        'Manhunt Live needs your location, and "Allow all the time" so tracking keeps working when the screen locks. You can change this in Settings.',
+        [{ text: 'Open Settings', onPress: () => Linking.openSettings() }, { text: 'Not now', style: 'cancel' }]
+      );
+    }
+  };
+
+  const requestNotifications = async () => {
+    await registerForPushNotifications(); // asks permission, then registers the device
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Notifications = require('expo-notifications');
+      setNotificationsAllowed((await Notifications.getPermissionsAsync()).status === 'granted');
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const openBatterySettings = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        await Linking.sendIntent('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
+      } else {
+        await Linking.openSettings();
+      }
+    } catch {
+      await Linking.openSettings();
+    }
+    setBatteryAllowed(true); // Android does not tell us the final choice
+  };
+
   const handleContinue = () => {
-    router.replace('/');
+    if (!locationAllowed) {
+      Alert.alert('Location required', 'You need to allow location to play. Tap ALLOW on the location card.');
+      return;
+    }
+    router.replace('/home');
   };
 
   return (
@@ -73,7 +139,7 @@ export default function PermissionsScreen() {
                   ) : (
                     <Pressable
                       style={styles.allowBtn}
-                      onPress={() => setLocationAllowed(true)}
+                      onPress={requestLocation}
                     >
                       <Text style={styles.allowBtnText}>ALLOW ›</Text>
                     </Pressable>
@@ -103,7 +169,7 @@ export default function PermissionsScreen() {
                   ) : (
                     <Pressable
                       style={styles.allowBtn}
-                      onPress={() => setNotificationsAllowed(true)}
+                      onPress={requestNotifications}
                     >
                       <Text style={styles.allowBtnText}>ALLOW ›</Text>
                     </Pressable>
@@ -133,7 +199,7 @@ export default function PermissionsScreen() {
                   ) : (
                     <Pressable
                       style={styles.allowBtn}
-                      onPress={() => setBatteryAllowed(true)}
+                      onPress={openBatterySettings}
                     >
                       <Text style={styles.allowBtnText}>ALLOW ›</Text>
                     </Pressable>

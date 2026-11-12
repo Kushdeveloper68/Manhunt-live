@@ -40,11 +40,15 @@ export default function SplashScreen() {
         clearInterval(interval);
 
         setTimeout(() => {
-          if (isAuthenticated) {
-            router.replace('/');
-          } else {
-            router.replace('/onboarding');
-          }
+          const go = () => {
+            const auth = useAuthStore.getState();
+            if (!auth.hydrated) {
+              setTimeout(go, 100); // saved login still loading
+              return;
+            }
+            router.replace(auth.isAuthenticated ? '/home' : '/onboarding');
+          };
+          go();
         }, 600);
       } else {
         setProgress(current);

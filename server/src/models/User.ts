@@ -19,6 +19,9 @@ export interface IUser extends Document {
     kmRun: number;
   };
   fcmToken?: string;
+  /** Expo push token of the user's current device */
+  pushToken?: string;
+  lastSeenAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +76,8 @@ const UserSchema = new Schema<IUser>(
     fcmToken: {
       type: String,
     },
+    pushToken: { type: String, index: true },
+    lastSeenAt: { type: Date },
   },
   {
     timestamps: true,

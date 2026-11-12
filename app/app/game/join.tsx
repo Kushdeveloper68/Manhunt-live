@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { colors, spacing, radii, typography } from '../../src/theme/theme';
 import { Button } from '../../src/components/Button';
 import { CodeInput } from '../../src/components/CodeInput';
 import { useGameStore } from '../../src/stores/gameStore';
+import { api, GameInviteEntry } from '../../src/services/api';
 
 export default function JoinGameScreen() {
   const router = useRouter();
@@ -20,7 +21,22 @@ export default function JoinGameScreen() {
 
   const [code, setCode] = useState('');
   const [showQrScanner, setShowQrScanner] = useState(false);
-  const [hasInvite, setHasInvite] = useState(true);
+  const [invites, setInvites] = useState<GameInviteEntry[]>([]);
+
+  const loadInvites = () => {
+    api.getInvites().then((r) => setInvites(r.invites)).catch(() => {});
+  };
+  useEffect(loadInvites, []);
+
+  const declineInvite = (inviteId: string) => {
+    setInvites((list) => list.filter((i) => i.inviteId !== inviteId));
+    api.declineInvite(inviteId).catch(() => {});
+  };
+
+  const acceptInvite = (inv: GameInviteEntry) => {
+    api.declineInvite(inv.inviteId).catch(() => {}); // consumed: remove it from the list
+    router.push({ pathname: '/lobby/player', params: { gameId: inv.gameId, code: inv.code } });
+  };
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleEnterLobby = async () => {
@@ -38,7 +54,11 @@ export default function JoinGameScreen() {
         [
           {
             text: 'ENTER LOBBY',
-            onPress: () => router.push('/'),
+            onPress: () =>
+              router.push({
+                pathname: '/lobby/player',
+                params: { gameId: String((game as any)._id ?? (game as any).id), code: game.code },
+              }),
           },
         ]
       );
@@ -142,55 +162,42 @@ export default function JoinGameScreen() {
             <View style={styles.invitesTitleRow}>
               <Text style={styles.invitesTitle}>DIRECT INVITES</Text>
               <View style={styles.inviteCountBadge}>
-                <Text style={styles.inviteCountText}>{hasInvite ? '1' : '0'}</Text>
+                <Text style={styles.inviteCountText}>{invites.length}</Text>
               </View>
             </View>
-            <Text style={styles.expiresText}>EXPIRES SOON</Text>
           </View>
 
-          {hasInvite ? (
-            <View style={styles.inviteCard}>
-              <View style={styles.inviteCardTop}>
-                <View style={styles.hostAvatar}>
-                  <Text style={styles.hostAvatarText}>🦅</Text>
-                </View>
-                <View style={styles.inviteDetails}>
-                  <View style={styles.hostHandleRow}>
-                    <Text style={styles.hostHandle}>@METRO_HAWK</Text>
-                    <View style={styles.chaserSquadPill}>
-                      <Text style={styles.chaserSquadText}>CHASER SQUAD</Text>
-                    </View>
+          {invites.length > 0 ? (
+            invites.map((inv) => (
+              <View key={inv.inviteId} style={styles.inviteCard}>
+                <View style={styles.inviteCardTop}>
+                  <View style={styles.hostAvatar}>
+                    <Text style={styles.hostAvatarText}>🎯</Text>
                   </View>
-                  <Text style={styles.inviteMatchName}>MIDTOWN SHADOW PURSUIT</Text>
-                  <Text style={styles.inviteMetrics}>
-                    📍 2.4 km zone • ⏱ Starts in 12m
-                  </Text>
+                  <View style={styles.inviteDetails}>
+                    <View style={styles.hostHandleRow}>
+                      <Text style={styles.hostHandle}>@{inv.from.username.toUpperCase()}</Text>
+                    </View>
+                    <Text style={styles.inviteMatchName}>{inv.gameName.toUpperCase()}</Text>
+                    <Text style={styles.inviteMetrics}>CODE {inv.code}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.inviteActions}>
+                  <Pressable style={styles.declineBtn} onPress={() => declineInvite(inv.inviteId)}>
+                    <Text style={styles.declineBtnText}>DECLINE</Text>
+                  </Pressable>
+                  <Pressable style={styles.acceptBtn} onPress={() => acceptInvite(inv)}>
+                    <Text style={styles.acceptBtnText}>ACCEPT</Text>
+                  </Pressable>
                 </View>
               </View>
-
-              <View style={styles.inviteActions}>
-                <Pressable
-                  style={styles.declineBtn}
-                  onPress={() => setHasInvite(false)}
-                >
-                  <Text style={styles.declineBtnText}>DECLINE</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.acceptBtn}
-                  onPress={() => {
-                    setCode('MH7842');
-                    Alert.alert('Invite Accepted', 'Lobby code MH7842 loaded. Tap "ENTER LOBBY" to join.');
-                  }}
-                >
-                  <Text style={styles.acceptBtnText}>ACCEPT</Text>
-                </Pressable>
-              </View>
-            </View>
+            ))
           ) : (
             <View style={styles.noInvitesBox}>
-              <Text style={styles.noInvitesTitle}>QUEUE CLEARED</Text>
+              <Text style={styles.noInvitesTitle}>NO INVITES</Text>
               <Text style={styles.noInvitesSub}>
-                No pending orbital matches. Share your operative handle to receive pings.
+                When a friend invites you to a lobby, it shows up here.
               </Text>
             </View>
           )}

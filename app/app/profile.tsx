@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../src/stores/authStore';
+import { api } from '../src/services/api';
+import { unregisterPushNotifications } from '../src/services/push';
 import { colors, spacing, radii, typography } from '../src/theme/theme';
 
 const fMono = typography.labelMonoSm.fontFamily;
@@ -31,6 +33,14 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, updateProfile, logout, isLoading } = useAuthStore();
 
+  // Always show fresh lifetime stats (they change when matches end)
+  useEffect(() => {
+    api
+      .getMe()
+      .then((res) => useAuthStore.setState({ user: res.user }))
+      .catch(() => {});
+  }, []);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState(user?.username || '');
   const [editAvatarId, setEditAvatarId] = useState(user?.avatarId || 'wolf');
@@ -41,7 +51,7 @@ export default function ProfileScreen() {
     user?.emergencyContact?.phone || ''
   );
 
-  const username = user?.username?.toUpperCase() || 'SHADOW_RUNNER';
+  const username = user?.username?.toUpperCase() || 'OPERATIVE';
   const stats = user?.stats || { games: 0, wins: 0, tags: 0, escapes: 0, kmRun: 0 };
   const winRate =
     stats.games > 0 ? Math.round((stats.wins / stats.games) * 100) : 0;
@@ -71,7 +81,8 @@ export default function ProfileScreen() {
       {
         text: 'SIGN OUT',
         style: 'destructive',
-        onPress: () => {
+        onPress: async () => {
+          await unregisterPushNotifications(); // stop pushes to this device before the token is dropped
           logout();
           router.replace('/auth/login');
         },

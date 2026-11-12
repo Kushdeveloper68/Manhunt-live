@@ -11,6 +11,9 @@ import {
 } from './math.js';
 import { checkNoGoZoneBreach, evaluateOutOfZonePenalty } from './safety.js';
 import { clearTagStateForGame } from './tagAttempts.js';
+import { buildMatchSummary } from './matchSummary.js';
+import { persistMatchResult } from '../services/stats.js';
+import { sendPushToUsers } from '../services/push.js';
 import { emitToUser } from '../socket/emit.js';
 import { Game } from '../models/Game.js';
 import { GameEvent } from '../models/GameEvent.js';
@@ -82,6 +85,7 @@ class GameLoopManager {
       tagCodes: new Map(),
       breachStartedAt: new Map(),
       permanentReveal: new Set(),
+      distanceMeters: new Map(),
     };
 
     // Assign a 4-digit code to each runner
@@ -231,6 +235,50 @@ class GameLoopManager {
 
     // 6. Zone / no-go breaches + host-chosen penalty
     await this.processZoneBreaches(state, now);
+
+    // 7. Push warnings (players may have the app in the background)
+    this.sendPushWarnings(state, now, maxStages);
+  }
+
+  /** "Zone shrinks in 60s" and "Reveal in 10s" - each sent once per event. */
+  private sendPushWarnings(state: LiveGameState, now: number, maxStages: number) {
+    const activeIds = state.players.filter((p) => p.status === 'ACTIVE').map((p) => p.userId);
+
+    if (
+      state.nextShrinkAt &&
+      state.shrinkStage < maxStages &&
+      state.nextShrinkAt - now <= 60_000 &&
+      state.nextShrinkAt > now &&
+      state.shrinkWarnedStage !== state.shrinkStage
+    ) {
+      state.shrinkWarnedStage = state.shrinkStage;
+      void sendPushToUsers(activeIds, {
+        title: 'Zone shrinking soon',
+        body: 'The play zone shrinks in about 60 seconds. Move inside the new boundary.',
+        data: { type: 'ZONE_SHRINK_WARNING', gameId: state.gameId },
+      });
+    }
+
+    if (
+      state.nextRevealAt &&
+      state.nextRevealAt - now <= 10_000 &&
+      state.nextRevealAt > now &&
+      state.revealWarnedFor !== state.nextRevealAt
+    ) {
+      state.revealWarnedFor = state.nextRevealAt;
+      const runnerIds = state.players.filter((p) => p.status === 'ACTIVE' && p.role === 'RUNNER').map((p) => p.userId);
+      const chaserIds = state.players.filter((p) => p.status === 'ACTIVE' && p.role === 'CHASER').map((p) => p.userId);
+      void sendPushToUsers(runnerIds, {
+        title: 'Reveal in 10 seconds',
+        body: 'Your position is about to be shared with the chasers. Keep moving!',
+        data: { type: 'REVEAL_WARNING', gameId: state.gameId },
+      });
+      void sendPushToUsers(chaserIds, {
+        title: 'Reveal in 10 seconds',
+        body: 'Runner positions are about to be revealed.',
+        data: { type: 'REVEAL_WARNING', gameId: state.gameId },
+      });
+    }
   }
 
   /**
@@ -392,9 +440,11 @@ class GameLoopManager {
     state.endedAt = Date.now();
     state.winnerRole = winningRole;
     state.endReason = reason;
+    state.summary = buildMatchSummary(state, winningRole);
 
     await gameStateStore.set(state.gameId, state);
     clearTagStateForGame(state.gameId);
+    void persistMatchResult(state.gameId, state.summary);
 
     await Game.findByIdAndUpdate(state.gameId, {
       status: 'ended',
@@ -408,6 +458,7 @@ class GameLoopManager {
         winningRole,
         reason,
         endedAt: state.endedAt,
+        summary: state.summary,
       });
     }
 

@@ -30,8 +30,47 @@ export interface GameResponse {
   createdAt: string;
 }
 
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+  }
+}
+
+export type FriendStatus = 'IN_GAME' | 'IN_LOBBY' | 'ONLINE' | 'OFFLINE';
+export interface FriendEntry {
+  userId: string;
+  username: string;
+  avatarId: string;
+  status: FriendStatus;
+  statusDetail?: string;
+  lastSeenLabel?: string;
+}
+export interface FriendRequestEntry {
+  requestId: string;
+  userId: string;
+  username: string;
+  avatarId: string;
+}
+export interface FriendSearchResult {
+  userId: string;
+  username: string;
+  avatarId: string;
+  relationship: 'NONE' | 'FRIEND' | 'REQUEST_SENT' | 'REQUEST_RECEIVED';
+  requestId?: string;
+}
+export interface GameInviteEntry {
+  inviteId: string;
+  gameId: string;
+  code: string;
+  gameName: string;
+  from: { userId: string; username: string; avatarId: string };
+  expiresAt: string;
+}
+
 class ApiService {
   private token: string | null = null;
+  /** Called when the server says our token is no longer valid. */
+  onUnauthorized: (() => void) | null = null;
 
   setToken(token: string | null) {
     this.token = token;
@@ -56,12 +95,63 @@ class ApiService {
       headers,
     });
 
-    const data = await res.json();
+    // Some endpoints answer 204 No Content
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = {};
+    }
     if (!res.ok) {
-      throw new Error(data.error || 'Network request failed');
+      if (res.status === 401 && this.token) this.onUnauthorized?.();
+      throw new ApiError(data.error || 'Network request failed', res.status);
     }
 
     return data as T;
+  }
+
+  // ───────── Friends ─────────
+  async getFriends(): Promise<{ friends: FriendEntry[]; incoming: FriendRequestEntry[]; outgoing: FriendRequestEntry[] }> {
+    return this.request('/friends');
+  }
+  async searchFriends(q: string): Promise<{ results: FriendSearchResult[] }> {
+    return this.request(`/friends/search?q=${encodeURIComponent(q)}`);
+  }
+  async sendFriendRequest(username: string): Promise<{ status: 'REQUESTED' | 'FRIENDS' }> {
+    return this.request('/friends/request', { method: 'POST', body: JSON.stringify({ username }) });
+  }
+  async acceptFriendRequest(requestId: string): Promise<void> {
+    await this.request(`/friends/requests/${encodeURIComponent(requestId)}/accept`, { method: 'POST' });
+  }
+  async declineFriendRequest(requestId: string): Promise<void> {
+    await this.request(`/friends/requests/${encodeURIComponent(requestId)}/decline`, { method: 'POST' });
+  }
+  async cancelFriendRequest(requestId: string): Promise<void> {
+    await this.request(`/friends/requests/${encodeURIComponent(requestId)}`, { method: 'DELETE' });
+  }
+  async removeFriend(userId: string): Promise<void> {
+    await this.request(`/friends/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+  }
+  async inviteFriend(gameId: string, userId: string): Promise<void> {
+    await this.request('/friends/invite', { method: 'POST', body: JSON.stringify({ gameId, userId }) });
+  }
+  async getInvites(): Promise<{ invites: GameInviteEntry[] }> {
+    return this.request('/friends/invites');
+  }
+  async declineInvite(inviteId: string): Promise<void> {
+    await this.request(`/friends/invites/${encodeURIComponent(inviteId)}/decline`, { method: 'POST' });
+  }
+
+  // ───────── Account ─────────
+  async putPushToken(token: string): Promise<void> {
+    await this.request('/auth/push-token', { method: 'PUT', body: JSON.stringify({ token }) });
+  }
+  async deletePushToken(): Promise<void> {
+    await this.request('/auth/push-token', { method: 'DELETE' });
+  }
+  async deleteAccount(confirmUsername: string): Promise<void> {
+    await this.request('/auth/me', { method: 'DELETE', body: JSON.stringify({ confirmUsername }) });
   }
 
   // Auth Endpoints

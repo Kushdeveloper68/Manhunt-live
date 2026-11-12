@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { colors, spacing, radii, typography } from '../src/theme/theme';
 import { useAuthStore } from '../src/stores/authStore';
 import { useGameStore } from '../src/stores/gameStore';
+import { registerForPushNotifications } from '../src/services/push';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -21,10 +22,15 @@ export default function HomeScreen() {
     loadMyGames();
   }, [loadMyGames]);
 
-  const username = user?.username ? `@${user.username.toUpperCase()}` : '@SHADOW_RUNNER';
-  const gamesCount = user?.stats?.games || 42;
-  const winsCount = user?.stats?.wins || 28;
-  const tagsCount = user?.stats?.tags || 64;
+  // Tell the server where to send invites / zone / reveal warnings (silently skipped if unavailable)
+  useEffect(() => {
+    void registerForPushNotifications();
+  }, []);
+
+  const username = user?.username ? `@${user.username.toUpperCase()}` : '@OPERATIVE';
+  const gamesCount = user?.stats?.games ?? 0;
+  const winsCount = user?.stats?.wins ?? 0;
+  const tagsCount = user?.stats?.tags ?? 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>

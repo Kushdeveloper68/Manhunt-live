@@ -7,6 +7,8 @@ import {
   ZoneSettings,
 } from '@manhunt/shared';
 
+import type { MatchSummary } from './matchSummary.js';
+
 export interface LiveGameState {
   gameId: string;
   code: string;
@@ -28,6 +30,11 @@ export interface LiveGameState {
   chaserSnapshots?: RunnerSnapshot[];
   breachStartedAt?: Map<string, number>; // userId -> when current zone breach began
   permanentReveal?: Set<string>; // runners whose live location is exposed to chasers (zone penalty)
+  distanceMeters?: Map<string, number>; // distance each player has covered (for km stats)
+  shrinkWarnedStage?: number; // last shrink stage a push warning was sent for
+  revealWarnedFor?: number; // nextRevealAt value a push warning was sent for
+  summary?: MatchSummary;
+  activeSos?: Set<string>; // players with an SOS currently active
   winnerRole?: 'CHASER' | 'RUNNER';
   endReason?: string;
 }

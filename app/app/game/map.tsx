@@ -16,6 +16,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useLiveGameStore } from '../../src/stores/liveGameStore';
 import { startLocationTracking, stopLocationTracking } from '../../src/services/location';
 import { colors, typography, spacing, radii } from '../../src/theme/theme';
+import { SosBanner } from '../../src/components/SosBanner';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -156,11 +157,8 @@ export default function LiveMapScreen() {
 
   function triggerSosEmergency() {
     Vibration.vibrate([100, 200, 100, 200]);
-    Alert.alert(
-      'EMERGENCY SOS BROADCAST',
-      'Live coordinates sent to host and emergency contact.',
-      [{ text: 'DISMISS', style: 'cancel' }]
-    );
+    // The SOS screen does the real work: alerts the host, shows honest status, call/SMS actions
+    router.push('/game/sos');
   }
 
   function handleTagAction() {
@@ -198,6 +196,7 @@ export default function LiveMapScreen() {
 
   return (
     <View style={styles.container}>
+      <SosBanner />
       {/* ——— Full Screen Tactical Map Canvas ——— */}
       <View style={styles.mapCanvas}>
         {/* Street Grid Matrix Lines */}

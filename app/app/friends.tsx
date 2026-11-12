@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../src/stores/authStore';
+import { useLobbyStore } from '../src/stores/lobbyStore';
+import { api, FriendEntry, FriendRequestEntry, FriendSearchResult } from '../src/services/api';
 import { colors, spacing, radii, typography } from '../src/theme/theme';
 
 const fMono = typography.labelMonoSm.fontFamily;
@@ -19,29 +21,9 @@ const fHeadlineSm = typography.headlineSm.fontFamily;
 const fBody = typography.bodyMd.fontFamily;
 const fBodyLg = typography.bodyLg.fontFamily;
 
-// ─── Mock data ──────────────────────────────────────────────────────────────
+// ─── Types & helpers ─────────────────────────────────────────────────────────
 
-type FriendStatus = 'IN_LOBBY' | 'ONLINE' | 'IN_GAME' | 'OFFLINE';
-
-interface Friend {
-  id: string;
-  callsign: string;
-  status: FriendStatus;
-  statusDetail?: string;
-  lastSeenLabel?: string;
-  avatar: string;
-}
-
-const MOCK_FRIENDS: Friend[] = [
-  { id: '1', callsign: 'KRONOS_9',   status: 'IN_LOBBY', statusDetail: 'IN LOBBY: CENTRAL PARK', avatar: 'K' },
-  { id: '2', callsign: 'NEON_HARE',  status: 'ONLINE',   statusDetail: 'ONLINE',                  avatar: 'N' },
-  { id: '3', callsign: 'CIPHER_88',  status: 'IN_GAME',  statusDetail: 'IN GAME',                 avatar: 'C' },
-  { id: '4', callsign: 'VEX_ROOK',   status: 'ONLINE',   statusDetail: 'ONLINE',                  avatar: 'V' },
-  { id: '5', callsign: 'METRO_HAWK', status: 'OFFLINE',  lastSeenLabel: '2H AGO',                 avatar: 'M' },
-  { id: '6', callsign: 'BLITZ_KID',  status: 'OFFLINE',  lastSeenLabel: 'YESTERDAY',              avatar: 'B' },
-  { id: '7', callsign: 'ZERO_TRACE', status: 'OFFLINE',  lastSeenLabel: '3D AGO',                 avatar: 'Z' },
-];
-
+type FriendStatus = FriendEntry['status'];
 const ACTIVE_STATUSES: FriendStatus[] = ['IN_LOBBY', 'ONLINE', 'IN_GAME'];
 
 type TabKey = 'friends' | 'requests' | 'nearby';
@@ -59,25 +41,13 @@ function AvatarBubble({ letter, online }: { letter: string; online: boolean }) {
   );
 }
 
-function ActionButton({
-  status,
-  onPress,
-}: {
-  status: FriendStatus;
-  onPress: () => void;
-}) {
-  if (status === 'IN_GAME') {
+function ActionButton({ status, onPress }: { status: FriendStatus; onPress: () => void }) {
+  if (status === 'IN_GAME' || status === 'OFFLINE') {
+    // Nothing to do with a friend who is mid-game or offline
     return (
-      <TouchableOpacity style={[styles.actionBtn, styles.watchBtn]} onPress={onPress} activeOpacity={0.8}>
-        <Text style={[styles.actionBtnText, { color: colors.roleRunner }]}>WATCH</Text>
-      </TouchableOpacity>
-    );
-  }
-  if (status === 'OFFLINE') {
-    return (
-      <TouchableOpacity style={[styles.actionBtn, styles.pingBtn]} onPress={onPress} activeOpacity={0.8}>
-        <Text style={styles.actionBtnText}>PING</Text>
-      </TouchableOpacity>
+      <View style={[styles.actionBtn, styles.pingBtn, { opacity: 0.45 }]}>
+        <Text style={styles.actionBtnText}>{status === 'IN_GAME' ? 'IN GAME' : 'OFFLINE'}</Text>
+      </View>
     );
   }
   return (
@@ -87,67 +57,121 @@ function ActionButton({
   );
 }
 
-function FriendRow({ friend }: { friend: Friend }) {
+function FriendRow({
+  friend,
+  onInvite,
+  onRemove,
+}: {
+  friend: FriendEntry;
+  onInvite: (f: FriendEntry) => void;
+  onRemove: (f: FriendEntry) => void;
+}) {
   const isOnline = ACTIVE_STATUSES.includes(friend.status);
-
-  const handleAction = () => {
-    if (friend.status === 'IN_GAME') {
-      Alert.alert('Coming Soon', 'Live spectate will be available after launch.');
-    } else if (friend.status === 'OFFLINE') {
-      Alert.alert('Ping Sent', `Hail transmitted to @${friend.callsign}.`);
-    } else {
-      Alert.alert('Invite Sent', `Squad invite transmitted to @${friend.callsign}.`);
-    }
-  };
-
   return (
-    <View style={styles.friendRow}>
-      <AvatarBubble letter={friend.avatar} online={isOnline} />
-      <View style={styles.friendInfo}>
-        <Text style={styles.callsign}>@{friend.callsign}</Text>
-        {friend.status !== 'OFFLINE' ? (
-          <Text style={styles.statusText}>{friend.statusDetail}</Text>
-        ) : (
-          <Text style={styles.lastSeenText}>{friend.lastSeenLabel}</Text>
-        )}
+    <TouchableOpacity activeOpacity={1} onLongPress={() => onRemove(friend)} delayLongPress={600}>
+      <View style={styles.friendRow}>
+        <AvatarBubble letter={friend.username.charAt(0).toUpperCase()} online={isOnline} />
+        <View style={styles.friendInfo}>
+          <Text style={styles.callsign}>@{friend.username.toUpperCase()}</Text>
+          {friend.status !== 'OFFLINE' ? (
+            <Text style={styles.statusText}>{friend.statusDetail}</Text>
+          ) : (
+            <Text style={styles.lastSeenText}>{friend.lastSeenLabel ?? 'OFFLINE'}</Text>
+          )}
+        </View>
+        <ActionButton status={friend.status} onPress={() => onInvite(friend)} />
       </View>
-      <ActionButton status={friend.status} onPress={handleAction} />
-    </View>
+    </TouchableOpacity>
   );
 }
 
-// ─── Stub tab contents ───────────────────────────────────────────────────────
-
-function RequestsTab() {
-  const MOCK_REQUESTS = [
-    { id: 'r1', callsign: 'SCAVENGER_01', avatar: 'S' },
-    { id: 'r2', callsign: 'RED_VIPER',    avatar: 'R' },
-    { id: 'r3', callsign: 'NYX_SOLO',     avatar: 'N' },
-  ];
+function RequestsTab({
+  incoming,
+  outgoing,
+  onAccept,
+  onDecline,
+  onCancel,
+}: {
+  incoming: FriendRequestEntry[];
+  outgoing: FriendRequestEntry[];
+  onAccept: (r: FriendRequestEntry) => void;
+  onDecline: (r: FriendRequestEntry) => void;
+  onCancel: (r: FriendRequestEntry) => void;
+}) {
+  if (incoming.length === 0 && outgoing.length === 0) {
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyIcon}>📭</Text>
+        <Text style={styles.emptyTitle}>NO PENDING REQUESTS</Text>
+        <Text style={styles.emptyBody}>Search a @callsign above to add someone.</Text>
+      </View>
+    );
+  }
   return (
     <View style={styles.tabContent}>
-      {MOCK_REQUESTS.map((req) => (
-        <View key={req.id} style={styles.requestRow}>
+      {incoming.map((req) => (
+        <View key={req.requestId} style={styles.requestRow}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarLetter}>{req.avatar}</Text>
+            <Text style={styles.avatarLetter}>{req.username.charAt(0).toUpperCase()}</Text>
           </View>
-          <Text style={[styles.callsign, { flex: 1, marginLeft: spacing.sm }]}>@{req.callsign}</Text>
+          <Text style={[styles.callsign, { flex: 1, marginLeft: spacing.sm }]}>@{req.username.toUpperCase()}</Text>
           <TouchableOpacity
             style={[styles.actionBtn, styles.inviteBtn, { marginRight: spacing.xs }]}
             activeOpacity={0.8}
-            onPress={() => Alert.alert('Accepted', `@${req.callsign} added to your network.`)}
+            onPress={() => onAccept(req)}
           >
             <Text style={[styles.actionBtnText, { color: colors.canvas }]}>CONFIRM</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.pingBtn]}
-            activeOpacity={0.8}
-            onPress={() => Alert.alert('Declined', `Request from @${req.callsign} dismissed.`)}
-          >
+          <TouchableOpacity style={[styles.actionBtn, styles.pingBtn]} activeOpacity={0.8} onPress={() => onDecline(req)}>
             <Text style={styles.actionBtnText}>DENY</Text>
           </TouchableOpacity>
         </View>
       ))}
+      {outgoing.map((req) => (
+        <View key={req.requestId} style={styles.requestRow}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarLetter}>{req.username.charAt(0).toUpperCase()}</Text>
+          </View>
+          <Text style={[styles.callsign, { flex: 1, marginLeft: spacing.sm }]}>@{req.username.toUpperCase()}</Text>
+          <TouchableOpacity style={[styles.actionBtn, styles.pingBtn]} activeOpacity={0.8} onPress={() => onCancel(req)}>
+            <Text style={styles.actionBtnText}>CANCEL</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function SearchResultRow({
+  result,
+  onAdd,
+  onAccept,
+}: {
+  result: FriendSearchResult;
+  onAdd: (r: FriendSearchResult) => void;
+  onAccept: (r: FriendSearchResult) => void;
+}) {
+  return (
+    <View style={styles.friendRow}>
+      <AvatarBubble letter={result.username.charAt(0).toUpperCase()} online={false} />
+      <View style={styles.friendInfo}>
+        <Text style={styles.callsign}>@{result.username.toUpperCase()}</Text>
+      </View>
+      {result.relationship === 'NONE' && (
+        <TouchableOpacity style={[styles.actionBtn, styles.inviteBtn]} onPress={() => onAdd(result)} activeOpacity={0.8}>
+          <Text style={[styles.actionBtnText, { color: colors.canvas }]}>ADD</Text>
+        </TouchableOpacity>
+      )}
+      {result.relationship === 'REQUEST_RECEIVED' && (
+        <TouchableOpacity style={[styles.actionBtn, styles.inviteBtn]} onPress={() => onAccept(result)} activeOpacity={0.8}>
+          <Text style={[styles.actionBtnText, { color: colors.canvas }]}>ACCEPT</Text>
+        </TouchableOpacity>
+      )}
+      {(result.relationship === 'REQUEST_SENT' || result.relationship === 'FRIEND') && (
+        <View style={[styles.actionBtn, styles.pingBtn, { opacity: 0.6 }]}>
+          <Text style={styles.actionBtnText}>{result.relationship === 'FRIEND' ? 'FRIEND' : 'SENT'}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -173,19 +197,85 @@ export default function FriendsScreen() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
 
+  const lobby = useLobbyStore((st) => st.gameState);
+
   const [activeTab, setActiveTab] = useState<TabKey>('friends');
   const [query, setQuery] = useState('');
+  const [friends, setFriends] = useState<FriendEntry[]>([]);
+  const [incoming, setIncoming] = useState<FriendRequestEntry[]>([]);
+  const [outgoing, setOutgoing] = useState<FriendRequestEntry[]>([]);
+  const [results, setResults] = useState<FriendSearchResult[] | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-  const myCallsign = user?.username?.toUpperCase() ?? 'SHADOW_RUNNER';
+  const myCallsign = user?.username?.toUpperCase() ?? 'OPERATIVE';
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return MOCK_FRIENDS;
-    const q = query.toLowerCase().replace('@', '');
-    return MOCK_FRIENDS.filter((f) => f.callsign.toLowerCase().includes(q));
+  const load = useCallback(() => {
+    api
+      .getFriends()
+      .then((d) => {
+        setFriends(d.friends);
+        setIncoming(d.incoming);
+        setOutgoing(d.outgoing);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  // Load now, then keep presence fresh while the screen is open
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  // Debounced username search on the server
+  useEffect(() => {
+    const q = query.trim().replace(/^@/, '').toLowerCase();
+    if (q.length < 2) {
+      setResults(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      api.searchFriends(q).then((r) => setResults(r.results)).catch(() => setResults([]));
+    }, 350);
+    return () => clearTimeout(t);
   }, [query]);
 
-  const onlineFriends = filtered.filter((f) => ACTIVE_STATUSES.includes(f.status));
-  const offlineFriends = filtered.filter((f) => f.status === 'OFFLINE');
+  const fail = (err: unknown) => Alert.alert('Error', err instanceof Error ? err.message : 'Something went wrong');
+
+  const handleInvite = (f: FriendEntry) => {
+    if (!lobby || lobby.status !== 'lobby') {
+      Alert.alert('No lobby', 'Create or join a lobby first, then invite your friends from here.');
+      return;
+    }
+    api.inviteFriend(lobby.gameId, f.userId).then(() => Alert.alert('Invite sent', `@${f.username} was invited.`)).catch(fail);
+  };
+
+  const handleRemove = (f: FriendEntry) =>
+    Alert.alert('Remove friend', `Remove @${f.username} from your network?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => api.removeFriend(f.userId).then(load).catch(fail) },
+    ]);
+
+  const handleAdd = (r: FriendSearchResult) =>
+    api
+      .sendFriendRequest(r.username)
+      .then((res) => {
+        setResults((list) =>
+          list ? list.map((x) => (x.userId === r.userId ? { ...x, relationship: res.status === 'FRIENDS' ? 'FRIEND' : 'REQUEST_SENT' } : x)) : list
+        );
+        load();
+      })
+      .catch(fail);
+
+  const acceptById = (requestId: string) =>
+    api.acceptFriendRequest(requestId).then(() => {
+      setQuery('');
+      load();
+    }).catch(fail);
+
+  const onlineFriends = friends.filter((f) => ACTIVE_STATUSES.includes(f.status));
+  const offlineFriends = friends.filter((f) => f.status === 'OFFLINE');
 
   const handleShare = () =>
     Alert.alert('Coming Soon', 'QR code sharing will be available after launch.');
@@ -246,7 +336,7 @@ export default function FriendsScreen() {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search @callsign or phone..."
+            placeholder="Search @callsign..."
             placeholderTextColor={colors.textSecondary}
             value={query}
             onChangeText={setQuery}
@@ -270,11 +360,11 @@ export default function FriendsScreen() {
               activeOpacity={0.8}
             >
               <Text style={[styles.tabPillText, activeTab === tab && styles.tabPillTextActive]}>
-                {tab === 'friends' ? 'FRIENDS (18)' : tab === 'requests' ? 'REQUESTS' : 'NEARBY (5)'}
+                {tab === 'friends' ? `FRIENDS (${friends.length})` : tab === 'requests' ? 'REQUESTS' : 'NEARBY'}
               </Text>
-              {tab === 'requests' && (
+              {tab === 'requests' && incoming.length > 0 && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>3</Text>
+                  <Text style={styles.badgeText}>{incoming.length}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -282,7 +372,31 @@ export default function FriendsScreen() {
         </View>
 
         {/* Tab content */}
-        {activeTab === 'friends' && (
+        {results !== null && (
+          <View style={{ gap: spacing.xs }}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>SEARCH RESULTS ({results.length})</Text>
+            </View>
+            {results.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>👁</Text>
+                <Text style={styles.emptyTitle}>NO OPERATIVES FOUND</Text>
+                <Text style={styles.emptyBody}>Check the spelling of the callsign.</Text>
+              </View>
+            ) : (
+              results.map((r) => (
+                <SearchResultRow
+                  key={r.userId}
+                  result={r}
+                  onAdd={handleAdd}
+                  onAccept={(x) => (x.requestId ? acceptById(x.requestId) : undefined)}
+                />
+              ))
+            )}
+          </View>
+        )}
+
+        {results === null && activeTab === 'friends' && (
           <View style={{ gap: spacing.lg }}>
             {/* Online Now */}
             {onlineFriends.length > 0 && (
@@ -295,7 +409,7 @@ export default function FriendsScreen() {
                   <Text style={styles.sectionMeta}>LIVE SECTOR</Text>
                 </View>
                 <View style={{ gap: spacing.xs }}>
-                  {onlineFriends.map((f) => <FriendRow key={f.id} friend={f} />)}
+                  {onlineFriends.map((f) => <FriendRow key={f.userId} friend={f} onInvite={handleInvite} onRemove={handleRemove} />)}
                 </View>
               </View>
             )}
@@ -310,23 +424,31 @@ export default function FriendsScreen() {
                   </View>
                 </View>
                 <View style={{ gap: spacing.xs }}>
-                  {offlineFriends.map((f) => <FriendRow key={f.id} friend={f} />)}
+                  {offlineFriends.map((f) => <FriendRow key={f.userId} friend={f} onInvite={handleInvite} onRemove={handleRemove} />)}
                 </View>
               </View>
             )}
 
-            {filtered.length === 0 && (
+            {loaded && friends.length === 0 && (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>👁</Text>
-                <Text style={styles.emptyTitle}>NO OPERATIVES FOUND</Text>
-                <Text style={styles.emptyBody}>Adjust your search parameters.</Text>
+                <Text style={styles.emptyIcon}>👥</Text>
+                <Text style={styles.emptyTitle}>NO FRIENDS YET</Text>
+                <Text style={styles.emptyBody}>Search a @callsign above to send a friend request.</Text>
               </View>
             )}
           </View>
         )}
 
-        {activeTab === 'requests' && <RequestsTab />}
-        {activeTab === 'nearby' && <NearbyTab />}
+        {results === null && activeTab === 'requests' && (
+          <RequestsTab
+            incoming={incoming}
+            outgoing={outgoing}
+            onAccept={(r) => acceptById(r.requestId)}
+            onDecline={(r) => api.declineFriendRequest(r.requestId).then(load).catch(fail)}
+            onCancel={(r) => api.cancelFriendRequest(r.requestId).then(load).catch(fail)}
+          />
+        )}
+        {results === null && activeTab === 'nearby' && <NearbyTab />}
       </ScrollView>
     </View>
   );

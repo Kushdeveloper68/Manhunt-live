@@ -46,8 +46,11 @@ export default function GameOverScreen() {
   const totalChasers = players.filter((p) => p.role === 'CHASER').length;
   const totalPlayers = players.length;
 
-  // Real per-match numbers from live game state
-  const matchTags = players.filter((p) => p.taggedBy && p.taggedBy === user?.id).length;
+  // Real per-match numbers: the server's final summary (tags, distance, MVP)
+  const summary = matchEnd?.summary;
+  const mySummary = summary?.players.find((p) => p.userId === user?.id);
+  const matchTags = mySummary?.tags ?? 0;
+  const matchKm = mySummary ? mySummary.distanceKm.toFixed(2) : '—';
 
   // Victory/defeat animations
   const bannerScale = useRef(new Animated.Value(0.6)).current;
@@ -149,8 +152,8 @@ export default function GameOverScreen() {
               <Text style={styles.statKey}>TAGS</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statValue}>{myRole ?? '—'}</Text>
-              <Text style={styles.statKey}>YOUR ROLE</Text>
+              <Text style={styles.statValue}>{matchKm}</Text>
+              <Text style={styles.statKey}>KM RUN</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={[styles.statValue, { color: colors.accentPrimary }]}>
@@ -211,7 +214,12 @@ export default function GameOverScreen() {
                 rank: i + 1,
                 name: p.username.toUpperCase(),
                 role: p.role,
-                label: p.status === 'ACTIVE' ? (p.role === 'RUNNER' ? 'SURVIVED' : 'ACTIVE') : 'TAGGED',
+                label:
+                  p.userId === summary?.mvpUserId
+                    ? 'MVP'
+                    : p.status === 'ACTIVE'
+                      ? p.role === 'RUNNER' ? 'SURVIVED' : 'ACTIVE'
+                      : 'TAGGED',
               }))
               .map((entry) => (
               <View key={entry.rank} style={styles.leaderRow}>

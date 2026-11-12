@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { UserProfile } from '@manhunt/shared';
+import { saveSession, loadSession, clearSession } from '../services/session';
 import { api } from '../services/api';
 
 interface AuthState {
@@ -8,7 +9,10 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  /** true once the saved login (if any) has been read from secure storage */
+  hydrated: boolean;
 
+  hydrate: () => Promise<void>;
   setAuth: (token: string, user: UserProfile) => void;
   clearAuth: () => void;
   login: (email: string, password: string) => Promise<void>;
@@ -30,15 +34,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
   isAuthenticated: false,
+  hydrated: false,
+
+  hydrate: async () => {
+    if (get().hydrated) return;
+    const saved = await loadSession();
+    if (!saved) {
+      set({ hydrated: true });
+      return;
+    }
+    api.setToken(saved.token);
+    set({ token: saved.token, user: saved.user, isAuthenticated: true, hydrated: true });
+    // Refresh the profile (fresh stats) in the background; a 401 logs us out via onUnauthorized
+    api
+      .getMe()
+      .then((res) => {
+        set({ user: res.user });
+        void saveSession(saved.token, res.user);
+      })
+      .catch(() => {});
+  },
 
   setAuth: (token: string, user: UserProfile) => {
     api.setToken(token);
     set({ token, user, isAuthenticated: true, error: null });
+    void saveSession(token, user);
   },
 
   clearAuth: () => {
     api.setToken(null);
     set({ token: null, user: null, isAuthenticated: false, error: null });
+    void clearSession();
   },
 
   login: async (email: string, password: string) => {
@@ -106,3 +132,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     get().clearAuth();
   },
 }));
+
+// If the server rejects our token (expired/deleted account), drop the session.
+api.onUnauthorized = () => useAuthStore.getState().clearAuth();

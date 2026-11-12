@@ -3,6 +3,7 @@ import cors from 'cors';
 import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
 import { gamesRouter } from './routes/games.js';
+import { friendsRouter } from './routes/friends.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { config } from './config.js';
 
@@ -18,6 +19,7 @@ export function createApp() {
   app.use('/api', healthRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/games', gamesRouter);
+  app.use('/api/friends', friendsRouter);
 
   // 404 handler
   app.use('*', (_req, res) => {

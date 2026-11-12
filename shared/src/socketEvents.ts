@@ -14,6 +14,8 @@ export const SOCKET_EVENTS = {
   TAG_DISPUTE: 'tag:dispute',
   SOS_TRIGGER: 'sos:trigger',
   SOS_RESOLVED: 'sos:resolved',
+  SOS_ACK: 'sos:ack',
+  SOS_LOCATION: 'sos:location',
 
   // Server to Client
   GAME_STATE: 'game:state',
@@ -26,6 +28,9 @@ export const SOCKET_EVENTS = {
   PLAYER_TAGGED: 'player:tagged',
   PLAYER_ELIMINATED: 'player:eliminated',
   GAME_END: 'game:end',
+  FRIEND_REQUEST: 'friend:request',
+  FRIEND_UPDATE: 'friend:update',
+  GAME_INVITE: 'game:invite',
   ERROR: 'error',
 } as const;
 

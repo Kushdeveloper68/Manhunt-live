@@ -119,3 +119,20 @@ export interface GameStateSync {
   runnerSnapshots: RunnerSnapshot[]; // revealed pings for chasers
   chaserSnapshots?: RunnerSnapshot[]; // revealed pings for runners (BOTH_WAYS mode only)
 }
+
+export interface MatchPlayerSummary {
+  userId: string;
+  username: string;
+  role: string;
+  survived: boolean; // still ACTIVE when the match ended
+  tags: number; // runners this player tagged
+  distanceKm: number;
+  score: number;
+}
+
+export interface MatchSummary {
+  winningRole: 'CHASER' | 'RUNNER';
+  durationMin: number;
+  players: MatchPlayerSummary[];
+  mvpUserId?: string;
+}

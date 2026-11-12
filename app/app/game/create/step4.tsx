@@ -49,7 +49,11 @@ export default function CreateStep4SafetyCheck() {
         [
           {
             text: 'GO TO LOBBY',
-            onPress: () => router.replace('/home'),
+            onPress: () =>
+              router.replace({
+                pathname: '/lobby/host',
+                params: { gameId: String((created as any)._id ?? (created as any).id) },
+              }),
           },
         ]
       );

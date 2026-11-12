@@ -27,7 +27,10 @@ export interface IGame extends Document {
     winningRole: PlayerRole;
     reason: string;
     mvpUserId?: mongoose.Types.ObjectId;
+    summary?: unknown;
   };
+  /** Set once per game so player stats are applied exactly once. */
+  statsApplied?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -130,7 +133,9 @@ const GameSchema = new Schema<IGame>(
       winningRole: { type: String, enum: ['CHASER', 'RUNNER'] },
       reason: { type: String },
       mvpUserId: { type: Schema.Types.ObjectId, ref: 'User' },
+      summary: { type: Schema.Types.Mixed },
     },
+    statsApplied: { type: Boolean, default: false },
   },
   {
     timestamps: true,

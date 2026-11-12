@@ -3,6 +3,11 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { config, googleAudiences } from '../config.js';
 import { resolveGoogleIdentity } from '../services/googleAuth.js';
+import { isValidPushToken } from '../services/push.js';
+import { Friendship } from '../models/Friendship.js';
+import { GameInvite } from '../models/GameInvite.js';
+import { Game } from '../models/Game.js';
+import { gameStateStore } from '../game/gameStateStore.js';
 import { User } from '../models/User.js';
 import {
   hashPassword,
@@ -281,3 +286,54 @@ authRouter.patch(
     }
   }
 );
+
+// Register this device for push notifications (Expo push token)
+authRouter.put('/push-token', requireAuth, async (req: AuthenticatedRequest, res: Response, next) => {
+  try {
+    const { token } = z.object({ token: z.string() }).parse(req.body);
+    if (!isValidPushToken(token)) throw new AppError('Invalid push token', 400);
+    // A device belongs to one account at a time (e.g. after switching accounts)
+    await User.updateMany({ pushToken: token, _id: { $ne: req.user!.userId } }, { $unset: { pushToken: 1 } });
+    await User.updateOne({ _id: req.user!.userId }, { $set: { pushToken: token } });
+    return res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Stop push notifications for this account (called on logout)
+authRouter.delete('/push-token', requireAuth, async (req: AuthenticatedRequest, res: Response, next) => {
+  try {
+    await User.updateOne({ _id: req.user!.userId }, { $unset: { pushToken: 1 } });
+    return res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Permanently delete my account. Requires typing the username to confirm.
+authRouter.delete('/me', requireAuth, async (req: AuthenticatedRequest, res: Response, next) => {
+  try {
+    const { confirmUsername } = z.object({ confirmUsername: z.string() }).parse(req.body);
+    const user = await User.findById(req.user!.userId);
+    if (!user) throw new AppError('User account not found', 404);
+    if (confirmUsername.trim().toLowerCase() !== user.username) {
+      throw new AppError('Username confirmation does not match', 400);
+    }
+
+    const id = user.id as string;
+    for (const state of await gameStateStore.listActive()) {
+      if (state.status !== 'ended' && state.players.some((p) => p.userId === id)) {
+        throw new AppError('Leave your current game before deleting your account', 409);
+      }
+    }
+
+    await Friendship.deleteMany({ $or: [{ requester: id }, { recipient: id }] });
+    await GameInvite.deleteMany({ $or: [{ fromUserId: id }, { toUserId: id }] });
+    await Game.updateMany({ status: 'lobby', 'players.userId': id }, { $pull: { players: { userId: id } } });
+    await User.deleteOne({ _id: id });
+    return res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});

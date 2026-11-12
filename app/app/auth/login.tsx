@@ -16,6 +16,9 @@ import { BottomSheet } from '../../src/components/BottomSheet';
 import { useAuthStore } from '../../src/stores/authStore';
 import { getGoogleIdToken, DEV_GOOGLE_MOCK_ENABLED } from '../../src/services/googleSignIn';
 
+// Returning users go straight home; brand-new accounts finish profile setup first
+const nextAfterAuth = () => (useAuthStore.getState().user?.dob ? '/home' : '/auth/profile');
+
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register, loginGoogle, isLoading } = useAuthStore();
@@ -38,7 +41,7 @@ export default function LoginScreen() {
         const idToken = await getGoogleIdToken();
         await loginGoogle({ idToken });
       }
-      router.replace('/auth/profile');
+      router.replace(nextAfterAuth());
     } catch (err) {
       Alert.alert('Sign-In Error', err instanceof Error ? err.message : 'Google sign-in failed');
     }
@@ -63,11 +66,11 @@ export default function LoginScreen() {
         }
         await register(email, password, username);
         setEmailModalVisible(false);
-        router.replace('/auth/profile');
+        router.replace(nextAfterAuth());
       } else {
         await login(email, password);
         setEmailModalVisible(false);
-        router.replace('/auth/profile');
+        router.replace(nextAfterAuth());
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Authentication failed');
@@ -75,7 +78,7 @@ export default function LoginScreen() {
   };
 
   const handleSpectatorQuickDispatch = () => {
-    router.push('/');
+    Alert.alert('Spectator mode', 'Spectating needs a game code from the host. Coming soon.');
   };
 
   return (

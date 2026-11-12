@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
+  Platform,
   View,
   Text,
   ScrollView,
@@ -10,6 +11,7 @@ import {
   Animated,
   PanResponder,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -18,6 +20,16 @@ import { getSocket, isSocketConnected } from '../../src/services/socket';
 import { SOCKET_EVENTS } from '@manhunt/shared';
 import { colors, typography, spacing, radii } from '../../src/theme/theme';
 
+// India's all-in-one emergency number. Override per region with EXPO_PUBLIC_EMERGENCY_NUMBER.
+const EMERGENCY_NUMBER = process.env.EXPO_PUBLIC_EMERGENCY_NUMBER || '112';
+
+interface SosAck {
+  hostNotified: boolean;
+  hostPushSent: boolean;
+  senderIsHost: boolean;
+  hasLocation: boolean;
+}
+
 export default function SosEmergencyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -25,7 +37,9 @@ export default function SosEmergencyScreen() {
   const user = useAuthStore((s) => s.user);
   const { gameId, myLocation } = useLiveGameStore();
 
-  const [elapsedSec, setElapsedSec] = useState(14);
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [ack, setAck] = useState<SosAck | null>(null);
+  const [fix, setFix] = useState<{ latitude: number; longitude: number } | null>(null);
   const [deescalated, setDeescalated] = useState(false);
 
   // Pulse animations
@@ -33,14 +47,34 @@ export default function SosEmergencyScreen() {
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Emit SOS trigger to server room if not already fired
-    if (gameId && isSocketConnected()) {
-      getSocket().emit(SOCKET_EVENTS.SOS_TRIGGER, {
-        gameId,
-        coordinates: myLocation || { latitude: 40.78509, longitude: -73.96828 },
-        reason: 'Active SOS Emergency Screen invoked',
-      });
-    }
+    let cancelled = false;
+
+    // The server confirms what it actually did (host reached or not)
+    const socket = isSocketConnected() ? getSocket() : null;
+    const onAck = (data: SosAck) => setAck(data);
+    socket?.on(SOCKET_EVENTS.SOS_ACK, onAck);
+
+    (async () => {
+      // Real coordinates only: last game fix, otherwise ask the GPS. Never a made-up position.
+      let coords = myLocation ? { latitude: myLocation.latitude, longitude: myLocation.longitude } : null;
+      if (!coords) {
+        try {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        } catch {
+          /* no fix yet: the server will use its own last known location */
+        }
+      }
+      if (cancelled) return;
+      if (coords) setFix(coords);
+      if (gameId && isSocketConnected()) {
+        getSocket().emit(SOCKET_EVENTS.SOS_TRIGGER, {
+          gameId,
+          ...(coords ? { coordinates: coords } : {}),
+          reason: 'SOS pressed in game',
+        });
+      }
+    })();
 
     // Elapsed timer
     const interval = setInterval(() => {
@@ -55,15 +89,21 @@ export default function SosEmergencyScreen() {
       ])
     ).start();
 
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      socket?.off(SOCKET_EVENTS.SOS_ACK, onAck);
+      clearInterval(interval);
+    };
   }, []);
 
-  const emergencyContactName = user?.emergencyContact?.name || 'Sarah Connor';
-  const emergencyContactPhone = user?.emergencyContact?.phone || '+1 555-234-5678';
+  const emergencyContactName = user?.emergencyContact?.name?.trim() || '';
+  const emergencyContactPhone = user?.emergencyContact?.phone?.trim() || '';
+  const hasContact = emergencyContactPhone.length > 0;
+  const position = fix ?? (myLocation ? { latitude: myLocation.latitude, longitude: myLocation.longitude } : null);
 
-  function handleCall911() {
-    Linking.openURL('tel:911').catch(() => {
-      Alert.alert('Call Failed', 'Unable to initiate call to emergency services.');
+  function handleCallEmergency() {
+    Linking.openURL(`tel:${EMERGENCY_NUMBER}`).catch(() => {
+      Alert.alert('Call Failed', `Unable to dial ${EMERGENCY_NUMBER}. Please dial it manually.`);
     });
   }
 
@@ -72,6 +112,35 @@ export default function SosEmergencyScreen() {
       Alert.alert('Call Failed', `Unable to dial ${emergencyContactPhone}`);
     });
   }
+
+  // Free, works offline of our servers: the phone's own SMS app with a pre-filled maps link
+  function handleSmsContact() {
+    const where = position
+      ? `https://maps.google.com/?q=${position.latitude},${position.longitude}`
+      : 'my location is not available yet';
+    const body = `SOS from ${user?.username ?? 'me'} (Manhunt Live game). I need help. ${where}`;
+    const sep = Platform.OS === 'ios' ? '&' : '?';
+    Linking.openURL(`sms:${emergencyContactPhone}${sep}body=${encodeURIComponent(body)}`).catch(() => {
+      Alert.alert('SMS Failed', 'Unable to open the messaging app.');
+    });
+  }
+
+  // Honest status text, driven by what the server really confirmed
+  const hostTitle = !gameId ? 'Not in a game' : ack ? (ack.senderIsHost ? 'You are the host' : 'Host alerted') : 'Contacting host…';
+  const hostSub = !gameId
+    ? 'No game host to alert. Call emergency services.'
+    : !ack
+      ? 'Sending your SOS to the game host'
+      : ack.senderIsHost
+        ? 'No one else was notified'
+        : ack.hostNotified
+          ? 'Your host received the SOS and can see your location'
+          : 'Host is not connected right now; a push notification was sent';
+  const hostRight = ack ? (ack.hostNotified || ack.senderIsHost ? 'RECEIVED' : 'PUSH SENT') : '…';
+  const contactSub = hasContact
+    ? `Not sent automatically. Tap "TEXT ${emergencyContactName.toUpperCase() || 'CONTACT'}" below.`
+    : 'No emergency contact saved. Add one in your profile.';
+  const streamRight = ack?.hostNotified ? 'ONLINE' : 'PENDING';
 
   function handleCancelSos() {
     if (gameId && isSocketConnected()) {
@@ -109,9 +178,9 @@ export default function SosEmergencyScreen() {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const coordsString = myLocation
-    ? `${myLocation.latitude.toFixed(5)}° N, ${myLocation.longitude.toFixed(5)}° W`
-    : '40.78509° N, -73.96828° W';
+  const coordsString = position
+    ? `${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}`
+    : 'LOCATING…';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -136,7 +205,7 @@ export default function SosEmergencyScreen() {
             <Text style={styles.elapsedTimer}>{formatTimer(elapsedSec)}</Text>
           </View>
           <Text style={[styles.bodySm, { color: colors.textSecondary, marginTop: 4 }]}>
-            Real-time coordinates and emergency audio transponder broadcasting to Manhattan Dispatch & Game Marshals.
+            Your game host is being alerted with your live location. If you are in danger, call emergency services now.
           </Text>
         </View>
 
@@ -147,7 +216,7 @@ export default function SosEmergencyScreen() {
             <View style={styles.beaconCore} />
             <View style={styles.satLockBadge}>
               <Text style={[styles.labelMonoSm, { color: colors.signalDanger, fontWeight: 'bold' }]}>
-                SAT LOCK • 9 SATS
+                {position ? 'GPS LOCATION KNOWN' : 'ACQUIRING GPS…'}
               </Text>
             </View>
           </View>
@@ -156,14 +225,14 @@ export default function SosEmergencyScreen() {
             <View style={styles.row}>
               <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>COORDINATES</Text>
               <Text style={[styles.labelMonoSm, { color: colors.accentPrimary, fontWeight: 'bold' }]}>
-                ±2.4 METERS (HIGH RESOLUTION LOCK)
+                LAST KNOWN FIX
               </Text>
             </View>
             <Text style={styles.coordsText}>{coordsString}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Text style={{ fontSize: 14 }}>📍</Text>
               <Text style={[styles.bodySm, { color: colors.textSecondary }]}>
-                Central Park West & 72nd St, NY
+                Your host sees this position on their map
               </Text>
             </View>
           </View>
@@ -179,36 +248,36 @@ export default function SosEmergencyScreen() {
           <View style={styles.statusRow}>
             <View style={styles.statusLeft}>
               <View style={styles.verifiedIcon}>
-                <Text style={{ color: colors.accentPrimary, fontSize: 14 }}>✓</Text>
+                <Text style={{ color: colors.accentPrimary, fontSize: 14 }}>{ack ? '✓' : '…'}</Text>
               </View>
               <View>
                 <Text style={[styles.bodyMd, { color: colors.textPrimary, fontWeight: '600' }]}>
-                  Host & Dispatch Notified
+                  {hostTitle}
                 </Text>
                 <Text style={[styles.bodySm, { color: colors.textSecondary }]}>
-                  Automated critical incident report filed
+                  {hostSub}
                 </Text>
               </View>
             </View>
-            <Text style={[styles.labelMonoSm, { color: colors.accentPrimary }]}>00:12 AGO</Text>
+            <Text style={[styles.labelMonoSm, { color: colors.accentPrimary }]}>{hostRight}</Text>
           </View>
 
           {/* Status Row 2 */}
           <View style={styles.statusRow}>
             <View style={styles.statusLeft}>
               <View style={styles.verifiedIcon}>
-                <Text style={{ color: colors.accentPrimary, fontSize: 14 }}>✓</Text>
+                <Text style={{ color: colors.accentPrimary, fontSize: 14 }}>✉</Text>
               </View>
               <View>
                 <Text style={[styles.bodyMd, { color: colors.textPrimary, fontWeight: '600' }]}>
-                  Emergency Contact Pinged
+                  Emergency Contact
                 </Text>
                 <Text style={[styles.bodySm, { color: colors.textSecondary }]}>
-                  SMS sent to {emergencyContactName} ({emergencyContactPhone})
+                  {contactSub}
                 </Text>
               </View>
             </View>
-            <Text style={[styles.labelMonoSm, { color: colors.accentPrimary }]}>DELIVERED</Text>
+            <Text style={[styles.labelMonoSm, { color: colors.accentPrimary }]}>MANUAL</Text>
           </View>
 
           {/* Status Row 3 */}
@@ -222,11 +291,11 @@ export default function SosEmergencyScreen() {
                   Live Location Streaming
                 </Text>
                 <Text style={[styles.bodySm, { color: colors.textSecondary }]}>
-                  Direct continuous beacon active
+                  Host sees your position while SOS is active
                 </Text>
               </View>
             </View>
-            <Text style={[styles.labelMonoSm, { color: colors.accentPrimary }]}>ONLINE</Text>
+            <Text style={[styles.labelMonoSm, { color: colors.accentPrimary }]}>{streamRight}</Text>
           </View>
         </View>
 
@@ -235,24 +304,37 @@ export default function SosEmergencyScreen() {
           {/* Call 911 */}
           <TouchableOpacity
             style={styles.call911Button}
-            onPress={handleCall911}
+            onPress={handleCallEmergency}
             activeOpacity={0.88}
           >
             <Text style={{ fontSize: 20 }}>📞</Text>
-            <Text style={styles.call911Text}>CALL EMERGENCY SERVICES (911)</Text>
+            <Text style={styles.call911Text}>CALL EMERGENCY SERVICES ({EMERGENCY_NUMBER})</Text>
           </TouchableOpacity>
 
-          {/* Call Contact */}
-          <TouchableOpacity
-            style={styles.callContactButton}
-            onPress={handleCallContact}
-            activeOpacity={0.88}
-          >
-            <Text style={{ fontSize: 18 }}>📱</Text>
-            <Text style={styles.callContactText}>
-              CALL {emergencyContactName.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
+          {/* Emergency contact: SMS with location (free, via the phone's own SMS app) + call */}
+          {hasContact ? (
+            <>
+              <TouchableOpacity style={styles.callContactButton} onPress={handleSmsContact} activeOpacity={0.88}>
+                <Text style={{ fontSize: 18 }}>✉️</Text>
+                <Text style={styles.callContactText}>
+                  TEXT {(emergencyContactName || 'CONTACT').toUpperCase()} MY LOCATION
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.callContactButton} onPress={handleCallContact} activeOpacity={0.88}>
+                <Text style={{ fontSize: 18 }}>📱</Text>
+                <Text style={styles.callContactText}>CALL {(emergencyContactName || 'CONTACT').toUpperCase()}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={styles.callContactButton}
+              onPress={() => router.push('/auth/profile')}
+              activeOpacity={0.88}
+            >
+              <Text style={{ fontSize: 18 }}>➕</Text>
+              <Text style={styles.callContactText}>ADD AN EMERGENCY CONTACT</Text>
+            </TouchableOpacity>
+          )}
 
           {/* De-escalation Button (I'm Safe) */}
           <TouchableOpacity

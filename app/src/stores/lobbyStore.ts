@@ -7,6 +7,7 @@
 import { create } from 'zustand';
 import { GameStateSync, GamePlayer } from '@manhunt/shared';
 import { SOCKET_EVENTS } from '@manhunt/shared';
+import { useStatusStore } from './statusStore';
 import {
   connectSocket,
   disconnectSocket,
@@ -78,6 +79,15 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
 
     socket.on(SOCKET_EVENTS.LOBBY_UPDATE, (data: GameStateSync) => {
       get()._setGameState(data);
+    });
+
+    socket.off(SOCKET_EVENTS.GAME_CANCELLED);
+    socket.on(SOCKET_EVENTS.GAME_CANCELLED, (d: { reason?: string }) => {
+      useStatusStore.getState().setNotice('CANCELLED', d?.reason || 'The host closed the lobby.');
+    });
+    socket.off(SOCKET_EVENTS.PLAYER_KICKED);
+    socket.on(SOCKET_EVENTS.PLAYER_KICKED, (d: { reason?: string }) => {
+      useStatusStore.getState().setNotice('KICKED', d?.reason || 'The host removed you from the lobby.');
     });
 
     socket.on(SOCKET_EVENTS.GAME_START, () => {

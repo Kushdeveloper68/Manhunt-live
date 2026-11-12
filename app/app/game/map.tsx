@@ -17,10 +17,13 @@ import { useLiveGameStore } from '../../src/stores/liveGameStore';
 import { startLocationTracking, stopLocationTracking } from '../../src/services/location';
 import { colors, typography, spacing, radii } from '../../src/theme/theme';
 import { SosBanner } from '../../src/components/SosBanner';
+import { HostMatchControls } from '../../src/components/HostMatchControls';
+import { useGeofenceHaptics } from '../../src/services/haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function LiveMapScreen() {
+  useGeofenceHaptics();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -197,6 +200,7 @@ export default function LiveMapScreen() {
   return (
     <View style={styles.container}>
       <SosBanner />
+      <HostMatchControls />
       {/* ——— Full Screen Tactical Map Canvas ——— */}
       <View style={styles.mapCanvas}>
         {/* Street Grid Matrix Lines */}

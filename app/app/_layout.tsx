@@ -4,6 +4,9 @@ import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
 import { colors } from '../src/theme/theme';
 import { useAuthStore } from '../src/stores/authStore';
+import { useSettingsStore } from '../src/stores/settingsStore';
+import { useStatusStore } from '../src/stores/statusStore';
+import { SystemStatusOverlay } from '../src/components/SystemStatusOverlay';
 
 // Screens that can be opened without being logged in
 const PUBLIC_SEGMENTS = [undefined, 'splash', 'onboarding', 'auth', 'legal', 'dev'];
@@ -14,10 +17,18 @@ export default function RootLayout() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  // Restore the saved login once on startup
+  const notice = useStatusStore((s) => s.notice);
+
+  // Restore the saved login and settings once on startup
   useEffect(() => {
     void useAuthStore.getState().hydrate();
+    void useSettingsStore.getState().hydrate();
   }, []);
+
+  // Match cancelled / removed from lobby: show the full-screen notice wherever the player is
+  useEffect(() => {
+    if (notice) router.replace('/game/status');
+  }, [notice, router]);
 
   // Logged-out users (or an expired token) are always sent back to login
   useEffect(() => {
@@ -31,6 +42,7 @@ export default function RootLayout() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" backgroundColor={colors.canvas} />
+      <SystemStatusOverlay />
       <Stack
         screenOptions={{
           headerShown: false,

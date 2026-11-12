@@ -348,31 +348,35 @@ class GameLoopManager {
       }
 
       if (result.action === 'ELIMINATE') {
-        await this.eliminateForBreach(state, player.userId);
+        await this.eliminatePlayer(state, player.userId, 'ZONE_BREACH');
       }
     }
   }
 
-  /** Eliminates a player for exceeding the zone-breach grace period. */
-  private async eliminateForBreach(state: LiveGameState, userId: string) {
+  /**
+   * Removes a player from the match (zone breach or leaving mid-game).
+   * Win conditions are re-evaluated on the next tick.
+   */
+  async eliminatePlayer(state: LiveGameState, userId: string, cause: 'ZONE_BREACH' | 'LEFT_GAME') {
     const player = state.players.find((p) => p.userId === userId);
     if (!player || player.status !== 'ACTIVE') return;
 
     const now = Date.now();
     player.status = 'ELIMINATED';
     player.taggedAt = now;
-    player.taggedBy = 'ZONE BREACH';
+    player.taggedBy = cause === 'ZONE_BREACH' ? 'ZONE BREACH' : 'LEFT GAME';
     state.breachStartedAt?.delete(userId);
+    state.activeSos?.delete(userId);
     await gameStateStore.set(state.gameId, state);
 
     if (mongoose.isValidObjectId(state.gameId) && mongoose.isValidObjectId(userId)) {
       await Game.updateOne(
         { _id: state.gameId, 'players.userId': userId },
         { $set: { 'players.$.status': 'ELIMINATED' } }
-      ).catch((err) => logger.error('Failed to persist breach elimination:', err));
+      ).catch((err) => logger.error('Failed to persist elimination:', err));
       await GameEvent.create({
         gameId: state.gameId,
-        type: 'ZONE_ELIMINATION',
+        type: cause === 'ZONE_BREACH' ? 'ZONE_ELIMINATION' : 'PLAYER_LEFT',
         ts: new Date(now),
         payload: { userId, username: player.username, role: player.role },
       }).catch(() => {});
@@ -390,11 +394,42 @@ class GameLoopManager {
       runnerUsername: player.username,
       remainingRunners,
       eliminatedAt: now,
-      cause: 'ZONE_BREACH',
+      cause,
     });
 
     await this.broadcastFilteredState(state);
-    logger.info(`@${player.username} eliminated for zone breach in game ${state.code}`);
+    logger.info(`@${player.username} removed from game ${state.code} (${cause})`);
+  }
+
+  /**
+   * Host cancels the match. No winner, no stats: everyone is told and the game is closed.
+   */
+  async cancelGame(state: LiveGameState, reason: string) {
+    if (state.status === 'ended') return;
+    state.status = 'ended';
+    state.endedAt = Date.now();
+    state.endReason = reason;
+    await gameStateStore.set(state.gameId, state);
+    clearTagStateForGame(state.gameId);
+
+    if (mongoose.isValidObjectId(state.gameId)) {
+      await Game.findByIdAndUpdate(state.gameId, {
+        status: 'ended',
+        endedAt: new Date(state.endedAt),
+        statsApplied: true, // a cancelled match must never count toward stats
+        'result.reason': 'CANCELLED_BY_HOST',
+      }).catch(() => {});
+    }
+
+    const room = `game:${state.gameId}`;
+    this.io?.to(room).emit(SOCKET_EVENTS.GAME_CANCELLED, { gameId: state.gameId, reason });
+    (this.io as any)?.in?.(room)?.socketsLeave?.(room);
+
+    const cleanup = setTimeout(() => {
+      void gameStateStore.delete(state.gameId);
+    }, ENDED_GAME_RETENTION_MS);
+    if (cleanup.unref) cleanup.unref();
+    logger.info(`Game ${state.code} cancelled by host: ${reason}`);
   }
 
   /** Re-sends each connected player their own filtered view of the game. */

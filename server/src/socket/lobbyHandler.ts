@@ -6,6 +6,9 @@ import { Game } from '../models/Game.js';
 import { User } from '../models/User.js';
 import { formatGameState } from '../utils/gameState.js';
 import { gameLoopManager } from '../game/gameLoop.js';
+import { gameStateStore } from '../game/gameStateStore.js';
+import { GameInvite } from '../models/GameInvite.js';
+import { userRoom } from './presence.js';
 import { AuthenticatedSocket } from './auth.js';
 import { logger } from '../logger.js';
 
@@ -114,6 +117,16 @@ export function registerLobbyHandlers(io: Server, socket: AuthenticatedSocket) {
   socket.on(SOCKET_EVENTS.GAME_LEAVE, async (payload: unknown) => {
     try {
       const { gameId } = gameActionSchema.parse(payload);
+
+      // A match is already running: leaving means dropping out of it (otherwise the
+      // player stays ACTIVE forever and the match can never end).
+      const live = await gameStateStore.get(gameId);
+      if (live && live.status !== 'ended') {
+        socket.leave(`game:${gameId}`);
+        await gameLoopManager.eliminatePlayer(live, user.userId, 'LEFT_GAME');
+        return;
+      }
+
       const game = await Game.findById(gameId);
       if (!game) return;
 
@@ -139,6 +152,46 @@ export function registerLobbyHandlers(io: Server, socket: AuthenticatedSocket) {
       }
     } catch (err: any) {
       logger.error('Error in game:leave handler:', err);
+    }
+  });
+
+  // 2b. Host cancels the match (lobby or running)
+  socket.on(SOCKET_EVENTS.GAME_CANCEL, async (payload: unknown) => {
+    try {
+      const { gameId } = gameActionSchema.parse(payload);
+      const dropInvites = () =>
+        mongoose.isValidObjectId(gameId) ? GameInvite.deleteMany({ gameId }).catch(() => {}) : Promise.resolve();
+
+      const live = await gameStateStore.get(gameId);
+      if (live && live.status !== 'ended') {
+        if (live.hostId !== user.userId) {
+          return socket.emit(SOCKET_EVENTS.ERROR, { message: 'Only the host can cancel the match' });
+        }
+        await gameLoopManager.cancelGame(live, 'The host cancelled the match');
+        await dropInvites();
+        return;
+      }
+
+      const game = await Game.findById(gameId);
+      if (!game || game.status !== 'lobby') return;
+      if (game.hostId.toString() !== user.userId) {
+        return socket.emit(SOCKET_EVENTS.ERROR, { message: 'Only the host can cancel the lobby' });
+      }
+      game.status = 'ended';
+      game.endedAt = new Date();
+      game.statsApplied = true;
+      await game.save();
+
+      const room = `game:${game._id.toString()}`;
+      io.to(room).emit(SOCKET_EVENTS.GAME_CANCELLED, {
+        gameId: game._id.toString(),
+        reason: 'The host closed the lobby',
+      });
+      io.in(room).socketsLeave(room);
+      await dropInvites();
+    } catch (err: any) {
+      logger.error('Error in game:cancel handler:', err);
+      socket.emit(SOCKET_EVENTS.ERROR, { message: err.message || 'Cancel failed' });
     }
   });
 
@@ -282,11 +335,16 @@ export function registerLobbyHandlers(io: Server, socket: AuthenticatedSocket) {
         .populate('hostId', 'username avatarId')
         .populate('players.userId', 'username avatarId stats');
 
+      // Tell the kicked player directly, then take them out of the room
+      const kickRoom = `game:${game._id.toString()}`;
+      io.to(userRoom(targetUserId)).emit(SOCKET_EVENTS.PLAYER_KICKED, {
+        gameId: game._id.toString(),
+        reason: 'The host removed you from the lobby',
+      });
+      io.in(userRoom(targetUserId)).socketsLeave(kickRoom);
+
       if (populated) {
-        io.to(`game:${game._id.toString()}`).emit(
-          SOCKET_EVENTS.LOBBY_UPDATE,
-          formatGameState(populated)
-        );
+        io.to(kickRoom).emit(SOCKET_EVENTS.LOBBY_UPDATE, formatGameState(populated));
       }
     } catch (err: any) {
       logger.error('Error in player:kick handler:', err);

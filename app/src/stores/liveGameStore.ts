@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Vibration } from 'react-native';
+import { useStatusStore } from './statusStore';
 import {
   GameStateSync,
   LivePlayerLocation,
@@ -26,6 +27,8 @@ interface LiveGameStateProps {
   nextRevealTimestamp?: number;
   nextShrinkTimestamp?: number;
   myLocation: { latitude: number; longitude: number } | null;
+  /** GPS accuracy of the last fix, in metres */
+  myAccuracy: number | null;
   mySpeed: number;
   myHeading: number;
   teammateLocations: LivePlayerLocation[];
@@ -51,7 +54,7 @@ interface LiveGameStateProps {
   } | null;
 
   initGame: (initialState: GameStateSync, currentUserId: string) => void;
-  updateLocation: (coords: { latitude: number; longitude: number }, speed?: number, heading?: number, isMock?: boolean) => void;
+  updateLocation: (coords: { latitude: number; longitude: number }, speed?: number, heading?: number, isMock?: boolean, accuracy?: number) => void;
   dismissExposedAlert: () => void;
   clearPendingTagAttempt: () => void;
   resetGame: () => void;
@@ -71,6 +74,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
   nextRevealTimestamp: undefined,
   nextShrinkTimestamp: undefined,
   myLocation: null,
+  myAccuracy: null,
   mySpeed: 0,
   myHeading: 0,
   teammateLocations: [],
@@ -182,7 +186,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
 
       // Listen for PLAYER_TAGGED & PLAYER_ELIMINATED
       socket.off(SOCKET_EVENTS.PLAYER_ELIMINATED);
-      socket.on(SOCKET_EVENTS.PLAYER_ELIMINATED, (data: { runnerUserId: string; runnerUsername: string; remainingRunners: number; eliminatedAt: number }) => {
+      socket.on(SOCKET_EVENTS.PLAYER_ELIMINATED, (data: { runnerUserId: string; runnerUsername: string; remainingRunners: number; eliminatedAt: number; cause?: string }) => {
         const updatedPlayers = get().players.map((p) =>
           p.userId === data.runnerUserId ? { ...p, status: 'ELIMINATED' as const } : p
         );
@@ -192,7 +196,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
           pendingTagAttempt: isMe ? null : get().pendingTagAttempt,
           eliminatedData: isMe
             ? {
-                taggedBy: 'CHASER',
+                taggedBy: data.cause === 'ZONE_BREACH' ? 'ZONE BREACH' : data.cause === 'LEFT_GAME' ? 'LEFT GAME' : 'CHASER',
                 taggedAt: data.eliminatedAt || Date.now(),
               }
             : get().eliminatedData,
@@ -226,6 +230,12 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
         });
       });
 
+      // Host cancelled the match
+      socket.off(SOCKET_EVENTS.GAME_CANCELLED);
+      socket.on(SOCKET_EVENTS.GAME_CANCELLED, (d: { reason?: string }) => {
+        useStatusStore.getState().setNotice('CANCELLED', d?.reason || 'The host cancelled the match.');
+      });
+
       // SOS alerts (only the host receives these from the server)
       socket.off(SOCKET_EVENTS.SOS_TRIGGER);
       socket.on(SOCKET_EVENTS.SOS_TRIGGER, (d: { userId: string; username: string; coordinates: { latitude: number; longitude: number } | null; timestamp: number }) => {
@@ -250,9 +260,10 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
     }
   },
 
-  updateLocation: (coords, speed = 0, heading = 0, isMock = false) => {
+  updateLocation: (coords, speed = 0, heading = 0, isMock = false, accuracy) => {
     set({
       myLocation: coords,
+      myAccuracy: accuracy ?? null,
       mySpeed: speed,
       myHeading: heading,
       compassHeading: heading || 12,
@@ -266,6 +277,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
         speed,
         heading,
         isMock,
+        accuracy,
         timestamp: Date.now(),
       });
     }

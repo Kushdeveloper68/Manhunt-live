@@ -29,11 +29,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Animated,
-} from 'react-native';
+  Animated, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GamePlayer } from '@manhunt/shared';
+import { GamePlayer, SOCKET_EVENTS } from '@manhunt/shared';
+import { getSocket, isSocketConnected } from '../../src/services/socket';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useLobbyStore } from '../../src/stores/lobbyStore';
 import { colors, typography, spacing, radii } from '../../src/theme/theme';
@@ -251,11 +251,32 @@ export default function HostLobbyScreen() {
     setCallsignInput('');
   }
 
+  // Leaving as host closes the lobby for everyone (otherwise it would stay open forever)
+  const handleBack = () => {
+    const id = gameState?.gameId;
+    if (!id) {
+      router.replace('/home');
+      return;
+    }
+    Alert.alert('Close lobby?', 'Everyone in the lobby will be removed.', [
+      { text: 'Stay', style: 'cancel' },
+      {
+        text: 'Close lobby',
+        style: 'destructive',
+        onPress: () => {
+          if (isSocketConnected()) getSocket().emit(SOCKET_EVENTS.GAME_CANCEL, { gameId: id });
+          leaveLobby(id);
+          router.replace('/home');
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* ——— Header ——— */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <Text style={[styles.bodyMd, { color: colors.textPrimary }]}>‹</Text>
         </TouchableOpacity>
         <View>

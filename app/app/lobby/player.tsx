@@ -88,7 +88,7 @@ export default function PlayerLobbyScreen() {
 
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
-  const { gameState, connected, socketError, gameStarted, joinLobby, setReady, assignRole } =
+  const { gameState, connected, socketError, gameStarted, joinLobby, leaveLobby, setReady, assignRole } =
     useLobbyStore();
 
   const [codeCopied, setCodeCopied] = useState(false);
@@ -161,7 +161,13 @@ export default function PlayerLobbyScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* ——— Header ——— */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => {
+            leaveLobby(gameId); // tell the server so you disappear from the host's lobby
+            router.replace('/home');
+          }}
+          style={styles.backBtn}
+        >
           <Text style={[styles.bodyMd, { color: colors.textPrimary }]}>‹</Text>
         </TouchableOpacity>
         <View>

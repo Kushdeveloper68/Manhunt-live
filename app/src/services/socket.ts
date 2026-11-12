@@ -8,6 +8,7 @@
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_EVENTS, GameStateSync } from '@manhunt/shared';
 import Constants from 'expo-constants';
+import { useConnectionStore, MAX_RECONNECT_ATTEMPTS } from '../stores/connectionStore';
 
 // Resolve server URL from Expo Constants or fall back to local dev
 const SERVER_URL: string =
@@ -41,6 +42,15 @@ export function connectSocket(token: string): Socket {
     transports: ['websocket'],
   });
 
+  // Feed the "SIGNAL LOST" banner
+  const conn = useConnectionStore.getState();
+  socket.on('connect', () => conn.setConnected());
+  socket.on('disconnect', (reason: string) => {
+    if (reason !== 'io client disconnect') conn.setDisconnected(); // ignore our own disconnects
+  });
+  socket.io.on('reconnect_attempt', (n: number) => conn.setAttempt(Math.min(n, MAX_RECONNECT_ATTEMPTS)));
+  socket.io.on('reconnect_failed', () => conn.setFailed());
+
   return socket;
 }
 
@@ -48,6 +58,7 @@ export function connectSocket(token: string): Socket {
  * Disconnect and clear the socket (e.g. on logout).
  */
 export function disconnectSocket(): void {
+  useConnectionStore.getState().setConnected(); // no banner after an intentional disconnect
   if (socket) {
     socket.disconnect();
     socket = null;
@@ -109,4 +120,11 @@ export function emitAddPlayer(gameId: string, username: string): void {
 
 export function emitGameStart(gameId: string): void {
   getSocket().emit(SOCKET_EVENTS.GAME_START, { gameId });
+}
+
+/** Manual retry after automatic reconnecting gave up. */
+export function retryConnection(): void {
+  if (!socket) return;
+  useConnectionStore.getState().setAttempt(1);
+  socket.connect();
 }

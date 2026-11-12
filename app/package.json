@@ -12,6 +12,7 @@
     "@manhunt/shared": "*",
     "@react-native-google-signin/google-signin": "^13.3.1",
     "expo": "~52.0.0",
+    "expo-battery": "~9.0.2",
     "expo-constants": "~17.0.0",
     "expo-font": "~13.0.0",
     "expo-linking": "~7.0.0",

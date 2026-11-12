@@ -1,8 +1,25 @@
 import * as Location from 'expo-location';
 import { useLiveGameStore } from '../stores/liveGameStore';
+import { useSettingsStore } from '../stores/settingsStore';
 
 let locationSubscription: Location.LocationSubscription | null = null;
-let currentTrackingInterval = 5000;
+
+/** GPS precision/battery trade-off comes from the user's settings. */
+function trackingOptions(): Location.LocationOptions {
+  const s = useSettingsStore.getState();
+  if (s.lowBatteryMode) return { accuracy: Location.Accuracy.Balanced, timeInterval: 10000, distanceInterval: 10 };
+  if (s.highPrecisionGps) return { accuracy: Location.Accuracy.High, timeInterval: 3000, distanceInterval: 3 };
+  return { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 5 };
+}
+
+export function isTrackingLocation(): boolean {
+  return locationSubscription !== null;
+}
+
+/** Re-apply settings (e.g. low-battery mode toggled) to a running tracker. */
+export async function restartLocationTracking(): Promise<void> {
+  if (locationSubscription) await startLocationTracking();
+}
 
 export async function requestLocationPermissions(): Promise<boolean> {
   const { status: fgStatus } = await Location.requestForegroundPermissionsAsync();
@@ -33,11 +50,7 @@ export async function startLocationTracking(): Promise<boolean> {
     }
 
     locationSubscription = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.High,
-        timeInterval: 3000,
-        distanceInterval: 3,
-      },
+      trackingOptions(),
       (loc) => {
         const coords = {
           latitude: loc.coords.latitude,
@@ -47,16 +60,9 @@ export async function startLocationTracking(): Promise<boolean> {
         const heading = loc.coords.heading || 0;
         const isMock = (loc as any).mocked === true;
 
-        useLiveGameStore.getState().updateLocation(coords, speed, heading, isMock);
-
-        // Adaptive interval adjustment
-        if (speed > 3.5 && currentTrackingInterval !== 2000) {
-          currentTrackingInterval = 2000;
-        } else if (speed < 0.8 && currentTrackingInterval !== 10000) {
-          currentTrackingInterval = 10000;
-        } else if (currentTrackingInterval !== 5000) {
-          currentTrackingInterval = 5000;
-        }
+        useLiveGameStore
+          .getState()
+          .updateLocation(coords, speed, heading, isMock, loc.coords.accuracy ?? undefined);
       }
     );
 

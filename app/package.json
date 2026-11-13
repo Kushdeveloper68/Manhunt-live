@@ -6,7 +6,8 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eas-build-post-install": "cd .. && npm run build:shared"
   },
   "dependencies": {
     "@manhunt/shared": "*",
@@ -14,6 +15,7 @@
     "expo": "~52.0.0",
     "expo-battery": "~9.0.2",
     "expo-constants": "~17.0.0",
+    "expo-dev-client": "~5.0.20",
     "expo-font": "~13.0.0",
     "expo-linking": "~7.0.0",
     "expo-location": "~18.0.10",

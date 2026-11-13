@@ -71,6 +71,7 @@ JS changes now reload instantly.
 4. The phone should show the notification "MANHUNT LIVE: match active" while the match runs, and it must disappear after the match.
 
 ## Troubleshooting
+- `Unable to resolve "query-string"` / `./socketEvents.js` while bundling: pull the latest files, run `npm install` and `npm run build:shared`, then restart with `npx expo start --dev-client --clear`. After EVERY pull that touches `shared/`, run `npm run build:shared` again.
 - Phone can't reach the server: same WiFi? AP/client isolation (college WiFi) blocks it. Use your phone hotspot for the PC, or run `npx expo start --dev-client --tunnel`
   and expose the server with a tunnel (cloudflared / ngrok) and use its https URL in app/.env.
 - See errors: Metro terminal shows the app's console logs; the server terminal shows server logs. Shake the phone for the dev menu.

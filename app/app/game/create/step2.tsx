@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,9 @@ import {
   SafeAreaView,
   ScrollView,
   Pressable,
+  Alert,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { colors, spacing, radii, typography } from '../../../src/theme/theme';
 import { Button } from '../../../src/components/Button';
@@ -22,6 +24,29 @@ export default function CreateStep2Zone() {
   );
   const [noGoZones, setNoGoZones] = useState(draft.settings.noGoZones || []);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  // Centre the zone on where the host really is (the old default was New York)
+  const centerOnMe = useCallback(async () => {
+    setLocating(true);
+    try {
+      const perm = await Location.requestForegroundPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('Location needed', 'Allow location so the zone can be centred on you.');
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setCenterCoord({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+    } catch {
+      Alert.alert('No GPS fix', 'Could not read your location. Turn on GPS and tap RE-CENTER.');
+    } finally {
+      setLocating(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void centerOnMe();
+  }, [centerOnMe]);
 
   const radiusKm = (radiusMeters / 1000).toFixed(1);
   const estLapMin = Math.round((radiusMeters / 1000) * 9.3);
@@ -45,9 +70,26 @@ export default function CreateStep2Zone() {
     setNoGoZones((prev) => [...prev, newZone]);
   };
 
-  const handleNext = () => {
+  const goNext = () => {
     setDraftZone(centerCoord, radiusMeters);
     router.push('/game/create/step3');
+  };
+
+  const handleNext = () => {
+    const stillDefault =
+      Math.abs(centerCoord.latitude - 40.78509) < 0.001 && Math.abs(centerCoord.longitude + 73.96828) < 0.001;
+    if (stillDefault) {
+      Alert.alert(
+        'Zone is in New York',
+        'The zone is not centred on you. Players outside the zone are penalised. Continue anyway?',
+        [
+          { text: 'Re-centre on me', onPress: () => void centerOnMe() },
+          { text: 'Continue', style: 'destructive', onPress: goNext },
+        ]
+      );
+      return;
+    }
+    goNext();
   };
 
   return (
@@ -77,12 +119,12 @@ export default function CreateStep2Zone() {
             <View style={styles.coordPill}>
               <View style={styles.pulseDot} />
               <Text style={styles.coordText}>
-                GRID: {centerCoord.latitude.toFixed(4)}, {centerCoord.longitude.toFixed(4)}
+                {locating ? 'LOCATING…' : `GRID: ${centerCoord.latitude.toFixed(4)}, ${centerCoord.longitude.toFixed(4)}`}
               </Text>
             </View>
             <Pressable
               style={styles.recenterBtn}
-              onPress={() => setCenterCoord({ latitude: 40.78509, longitude: -73.96828 })}
+              onPress={() => void centerOnMe()}
             >
               <Text style={styles.recenterIcon}>🎯</Text>
               <Text style={styles.recenterText}>RE-CENTER</Text>

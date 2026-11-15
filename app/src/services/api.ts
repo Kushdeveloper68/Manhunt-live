@@ -1,4 +1,4 @@
-import { UserProfile, GameSettings, GamePlayer } from '@manhunt/shared';
+import { UserProfile, GameSettings, GamePlayer, GameListItem } from '@manhunt/shared';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:4000/api';
 
@@ -217,7 +217,7 @@ class ApiService {
     return this.request(`/games/${encodeURIComponent(id)}`);
   }
 
-  async getMyGames(): Promise<{ active: GameResponse[]; recent: GameResponse[] }> {
+  async getMyGames(): Promise<{ active: GameListItem[]; recent: GameListItem[] }> {
     return this.request('/games/my-games');
   }
 }

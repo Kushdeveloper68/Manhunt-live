@@ -118,6 +118,8 @@ export interface GameStateSync {
   teammateLocations: LivePlayerLocation[];
   runnerSnapshots: RunnerSnapshot[]; // revealed pings for chasers
   chaserSnapshots?: RunnerSnapshot[]; // revealed pings for runners (BOTH_WAYS mode only)
+  /** Present once the match is over, so a player who rejoins late still sees the result. */
+  matchResult?: { winningRole: 'CHASER' | 'RUNNER'; reason: string; summary?: MatchSummary };
 }
 
 export interface MatchPlayerSummary {
@@ -135,4 +137,24 @@ export interface MatchSummary {
   durationMin: number;
   players: MatchPlayerSummary[];
   mvpUserId?: string;
+}
+
+export interface GameListItem {
+  id: string;
+  code: string;
+  name: string;
+  status: 'lobby' | 'countdown' | 'running' | 'ended';
+  hostUsername: string;
+  /** my role in that game */
+  role: string;
+  playerCount: number;
+  createdAt: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationMin?: number;
+  /** ended without a result (host cancelled, or the server restarted) */
+  cancelled: boolean;
+  /** null for unfinished / cancelled matches */
+  won: boolean | null;
+  stats?: { tags: number; distanceKm: number; survived: boolean };
 }

@@ -5,6 +5,7 @@ import { config } from './config.js';
 import { connectDatabase } from './db.js';
 import { logger } from './logger.js';
 import { setupSocketIO } from './socket/index.js';
+import { closeStaleGames } from './services/cleanup.js';
 
 export function createHttpServer(app = createApp()) {
   const server = http.createServer(app);
@@ -23,6 +24,11 @@ export function createHttpServer(app = createApp()) {
 
 async function bootstrap() {
   await connectDatabase();
+
+  // Matches running when the server last stopped can't resume (state lives in memory): close them
+  await closeStaleGames();
+  const cleanupTimer = setInterval(() => void closeStaleGames(), 10 * 60 * 1000);
+  cleanupTimer.unref();
 
   const { server, app, io } = createHttpServer();
 

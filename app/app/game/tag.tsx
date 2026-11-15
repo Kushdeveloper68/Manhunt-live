@@ -186,7 +186,7 @@ export default function TagVerificationScreen() {
         router.back();
       }, 1500);
     } else {
-      showToast('Transmitting simulated tag attempt...', 'success');
+      showToast('Not connected to the match. Check your connection and try again.', 'danger');
     }
   }
 

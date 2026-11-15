@@ -95,6 +95,10 @@ export function filterStateForPlayer(
     teammateLocations: visibleTeammateLocations,
     runnerSnapshots: visibleRunnerSnapshots,
     chaserSnapshots: visibleChaserSnapshots,
+    matchResult:
+      state.status === 'ended' && state.winnerRole
+        ? { winningRole: state.winnerRole, reason: state.endReason ?? '', summary: state.summary }
+        : undefined,
   };
 }
 

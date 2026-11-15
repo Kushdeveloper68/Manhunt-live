@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GameSettings, NoGoZone } from '@manhunt/shared';
+import { GameSettings, NoGoZone, GameListItem } from '@manhunt/shared';
 import { api, GameResponse } from '../services/api';
 
 export interface CreateGameDraft {
@@ -36,8 +36,8 @@ const DEFAULT_DRAFT: CreateGameDraft = {
 
 interface GameState {
   currentGame: GameResponse | null;
-  activeGames: GameResponse[];
-  recentGames: GameResponse[];
+  activeGames: GameListItem[];
+  recentGames: GameListItem[];
   draft: CreateGameDraft;
   isLoading: boolean;
   error: string | null;

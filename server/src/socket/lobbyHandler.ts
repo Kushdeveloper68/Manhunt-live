@@ -7,6 +7,7 @@ import { User } from '../models/User.js';
 import { formatGameState } from '../utils/gameState.js';
 import { gameLoopManager } from '../game/gameLoop.js';
 import { gameStateStore } from '../game/gameStateStore.js';
+import { filterStateForPlayer } from '../game/visibility.js';
 import { GameInvite } from '../models/GameInvite.js';
 import { userRoom } from './presence.js';
 import { AuthenticatedSocket } from './auth.js';
@@ -51,6 +52,20 @@ export function registerLobbyHandlers(io: Server, socket: AuthenticatedSocket) {
   socket.on(SOCKET_EVENTS.GAME_JOIN, async (payload: unknown) => {
     try {
       const { gameId, code } = joinGameSchema.parse(payload);
+
+      // Rejoining a match that is already running (app restarted, network dropped):
+      // put the socket back in the room and send this player their own filtered view.
+      if (gameId) {
+        const live = await gameStateStore.get(gameId);
+        if (live && live.players.some((p) => p.userId === user.userId)) {
+          socket.join(`game:${gameId}`);
+          live.offlineSince?.delete(user.userId);
+          socket.emit(SOCKET_EVENTS.GAME_STATE, filterStateForPlayer(live, user.userId));
+          logger.info(`@${user.username} rejoined game ${live.code} (${live.status})`);
+          return;
+        }
+      }
+
       let query: any = {};
       if (gameId) {
         query._id = gameId;

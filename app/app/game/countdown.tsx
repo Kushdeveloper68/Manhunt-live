@@ -8,6 +8,7 @@ import {
   Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { formatDistance } from '@manhunt/shared';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useLobbyStore } from '../../src/stores/lobbyStore';
@@ -24,6 +25,10 @@ export default function RoleRevealCountdownScreen() {
     myRole,
     status,
     countdownRemainingMs,
+    currentZone,
+    revealIntervalMin,
+    durationMin,
+    code,
     initGame,
   } = useLiveGameStore();
 
@@ -35,8 +40,6 @@ export default function RoleRevealCountdownScreen() {
     lobbyState?.settings?.headStartMin ? lobbyState.settings.headStartMin * 60 : 180
   );
 
-  // Pulse jitter for heart rate telemetry (±4 BPM)
-  const [pulseRate, setPulseRate] = useState(142);
 
   useEffect(() => {
     if (lobbyState && user) {
@@ -61,11 +64,6 @@ export default function RoleRevealCountdownScreen() {
       })
     ).start();
 
-    const bpmTimer = setInterval(() => {
-      setPulseRate(140 + Math.floor(Math.random() * 8));
-    }, 2800);
-
-    return () => clearInterval(bpmTimer);
   }, []);
 
   // Timer countdown management
@@ -205,11 +203,11 @@ export default function RoleRevealCountdownScreen() {
             <View style={styles.paramLeft}>
               <Text style={{ fontSize: 16 }}>🌐</Text>
               <Text style={[styles.bodySm, { color: colors.textPrimary }]}>
-                OPERATIONAL SECTOR: 1.5 KM PERIMETER LIMIT
+                {currentZone ? `PLAY ZONE: ${formatDistance(currentZone.radius)} RADIUS` : 'PLAY ZONE'}
               </Text>
             </View>
             <View style={styles.pillBadge}>
-              <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>GRID A</Text>
+              <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>{code ? `CODE ${code}` : ''}</Text>
             </View>
           </View>
         </View>
@@ -217,16 +215,18 @@ export default function RoleRevealCountdownScreen() {
         {/* ——— Live Telemetry Grid ——— */}
         <View style={styles.telemetryGrid}>
           <View style={styles.telemetryCell}>
-            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>GPS ACC</Text>
-            <Text style={[styles.labelMonoMd, { color: colors.accentPrimary }]}>±3.1M</Text>
+            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>ZONE</Text>
+            <Text style={[styles.labelMonoMd, { color: colors.accentPrimary }]}>
+              {currentZone ? formatDistance(currentZone.radius).toUpperCase() : '--'}
+            </Text>
           </View>
           <View style={[styles.telemetryCell, styles.cellBorder]}>
-            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>SECTOR</Text>
-            <Text style={[styles.labelMonoMd, { color: colors.textPrimary }]}>C-PARK</Text>
+            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>REVEAL</Text>
+            <Text style={[styles.labelMonoMd, { color: colors.textPrimary }]}>EVERY {revealIntervalMin} MIN</Text>
           </View>
           <View style={styles.telemetryCell}>
-            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>PULSE</Text>
-            <Text style={[styles.labelMonoMd, { color: colors.signalDanger }]}>{pulseRate} BPM</Text>
+            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>LENGTH</Text>
+            <Text style={[styles.labelMonoMd, { color: colors.textPrimary }]}>{durationMin} MIN</Text>
           </View>
         </View>
       </ScrollView>

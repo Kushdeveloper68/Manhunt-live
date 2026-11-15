@@ -1,3 +1,4 @@
+import { toGameListItem } from '../utils/gameList.js';
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import mongoose from 'mongoose';
@@ -123,12 +124,10 @@ gamesRouter.get('/my-games', requireAuth, async (req: AuthenticatedRequest, res:
       .populate('hostId', 'username avatarId')
       .populate('players.userId', 'username avatarId');
 
-    const activeGames = games.filter((g) => g.status === 'lobby' || g.status === 'running' || g.status === 'countdown');
-    const recentGames = games.filter((g) => g.status === 'ended');
-
+    const items = games.map((g) => toGameListItem(g, req.user!.userId));
     return res.status(200).json({
-      active: activeGames,
-      recent: recentGames,
+      active: items.filter((g) => g.status !== 'ended'),
+      recent: items.filter((g) => g.status === 'ended'),
     });
   } catch (err) {
     next(err);

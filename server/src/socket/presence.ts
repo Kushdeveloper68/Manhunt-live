@@ -6,6 +6,11 @@ export function setPresenceIo(io: Server) {
   ioRef = io;
 }
 
+/** False when the socket server isn't running (unit tests): presence can't be judged then. */
+export function presenceAvailable(): boolean {
+  return ioRef !== null;
+}
+
 export const userRoom = (userId: string) => `user:${userId}`;
 
 /** A user is online if at least one authenticated socket is connected. */

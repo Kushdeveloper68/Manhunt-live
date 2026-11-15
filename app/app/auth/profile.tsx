@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { colors, spacing, radii, typography } from '../../src/theme/theme';
 import { Button } from '../../src/components/Button';
 import { useAuthStore } from '../../src/stores/authStore';
+import { ageFromDob, isPlausiblePhone } from '@manhunt/shared';
 
 const AVATARS = [
   { id: 'scout', label: 'SCOUT', icon: '🎯' },
@@ -29,13 +30,13 @@ export default function CreateProfileScreen() {
   const router = useRouter();
   const { user, updateProfile, checkUsername, isLoading } = useAuthStore();
 
-  const [callsign, setCallsign] = useState(user?.username || 'SHADOW_RUNNER');
+  const [callsign, setCallsign] = useState(user?.username || '');
   const [isAvailable, setIsAvailable] = useState<boolean | null>(true);
   const [isChecking, setIsChecking] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatarId || 'wolf');
-  const [dob, setDob] = useState('2002-08-14');
-  const [contactName, setContactName] = useState('Sarah Connor');
-  const [contactPhone, setContactPhone] = useState('+1 (555) 234-5678');
+  const [dob, setDob] = useState(user?.dob ? String(user.dob).slice(0, 10) : '');
+  const [contactName, setContactName] = useState(user?.emergencyContact?.name ?? '');
+  const [contactPhone, setContactPhone] = useState(user?.emergencyContact?.phone ?? '');
 
   // Live username availability check with debounce
   useEffect(() => {
@@ -60,9 +61,30 @@ export default function CreateProfileScreen() {
       return;
     }
 
-    if (!contactName.trim() || !contactPhone.trim()) {
-      Alert.alert('Emergency Contact', 'Please provide an emergency contact name and phone for field safety.');
+    const age = ageFromDob(dob);
+    if (age === null) {
+      Alert.alert('Date of birth', 'Enter your real date of birth as YYYY-MM-DD, e.g. 2004-08-14.');
       return;
+    }
+    if (age < 13) {
+      Alert.alert('Too young', 'Manhunt Live is for players aged 13 and over.');
+      return;
+    }
+
+    if (!contactName.trim() || !isPlausiblePhone(contactPhone)) {
+      Alert.alert('Emergency Contact', 'Enter a real emergency contact name and a valid phone number. SOS uses it to text your location.');
+      return;
+    }
+
+    // Under 18: a parent/guardian must be OK with this real-world game
+    if (age < 18) {
+      const ok = await new Promise<boolean>((resolve) =>
+        Alert.alert('Guardian permission', 'Players under 18 need a parent or guardian\'s permission. Do you have it?', [
+          { text: 'No', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Yes, I do', onPress: () => resolve(true) },
+        ])
+      );
+      if (!ok) return;
     }
 
     try {

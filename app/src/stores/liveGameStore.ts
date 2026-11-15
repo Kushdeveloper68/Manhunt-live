@@ -136,7 +136,9 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
       clockOffsetMs: initialState.serverTime ? initialState.serverTime - Date.now() : 0,
       shrinkWarning: null,
       players: initialState.players || [],
-      matchEnd: null,
+      matchEnd: initialState.matchResult
+        ? { winnerRole: initialState.matchResult.winningRole, reason: initialState.matchResult.reason, summary: initialState.matchResult.summary }
+        : null,
       incomingSos: {},
     });
 

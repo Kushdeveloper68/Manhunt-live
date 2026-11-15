@@ -13,6 +13,17 @@ import { useAuthStore } from '../src/stores/authStore';
 import { useGameStore } from '../src/stores/gameStore';
 import { registerForPushNotifications } from '../src/services/push';
 
+const statusLabel = (status: string) =>
+  status === 'lobby' ? 'IN LOBBY' : status === 'countdown' ? 'STARTING' : status === 'running' ? 'LIVE' : status.toUpperCase();
+
+const dateLabel = (iso: string) => {
+  const d = new Date(iso);
+  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
+  if (days <= 0) return 'TODAY';
+  if (days === 1) return 'YESTERDAY';
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase();
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -110,7 +121,6 @@ export default function HomeScreen() {
         <View style={styles.statsCard}>
           <View style={styles.statsHeader}>
             <Text style={styles.statsHeaderText}>LIFETIME STATS</Text>
-            <Text style={styles.statsSectorText}>SEC: NYC-08</Text>
           </View>
           <View style={styles.statsGrid}>
             <View style={styles.statCell}>
@@ -130,83 +140,78 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Active Patrol Minimap Telemetry Preview */}
-        <View style={styles.radarPreviewSection}>
-          <View style={styles.radarPreviewHeader}>
-            <Text style={styles.radarPreviewTitle}>ACTIVE ZONE RADAR</Text>
-            <Text style={styles.radarPreviewCount}>14 RUNNERS NEARBY</Text>
-          </View>
-          <View style={styles.radarImageBox}>
-            <View style={styles.radarSweepBadge}>
-              <Text style={styles.radarSweepIcon}>📍</Text>
-              <Text style={styles.radarSweepText}>RADAR SWEEP ACTIVE</Text>
+        {/* Active match (rejoin) */}
+        {activeGames.length > 0 && (
+          <View style={styles.recentSection}>
+            <View style={styles.recentHeader}>
+              <Text style={styles.recentTitle}>ACTIVE MATCH</Text>
             </View>
+            {activeGames.map((g) => (
+              <View key={g.id} style={styles.sessionCard}>
+                <View style={styles.sessionCardTop}>
+                  <View style={styles.sessionTitleRow}>
+                    <View style={g.role === 'CHASER' ? styles.chaserRolePill : styles.runnerRolePill}>
+                      <Text style={g.role === 'CHASER' ? styles.chaserRoleText : styles.runnerRoleText}>
+                        {g.role === 'UNASSIGNED' ? 'LOBBY' : g.role}
+                      </Text>
+                    </View>
+                    <Text style={styles.sessionName}>{g.name.toUpperCase()}</Text>
+                  </View>
+                  <Text style={styles.sessionDate}>{statusLabel(g.status)}</Text>
+                </View>
+                <View style={styles.sessionCardBottom}>
+                  <Text style={styles.sessionDuration}>
+                    CODE {g.code} · {g.playerCount} PLAYER{g.playerCount === 1 ? '' : 'S'}
+                  </Text>
+                  <Pressable
+                    style={styles.rejoinBtn}
+                    onPress={() => router.push({ pathname: '/game/rejoin', params: { gameId: g.id } })}
+                  >
+                    <Text style={styles.rejoinBtnText}>{g.status === 'lobby' ? 'OPEN LOBBY' : 'REJOIN'}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
           </View>
-        </View>
+        )}
 
         {/* Recent Sessions Log */}
         <View style={styles.recentSection}>
           <View style={styles.recentHeader}>
             <Text style={styles.recentTitle}>RECENT SESSIONS</Text>
-            <Text style={styles.recentArchive}>ARCHIVE →</Text>
           </View>
 
-          {/* Session 1 */}
-          <View style={styles.sessionCard}>
-            <View style={styles.sessionCardTop}>
-              <View style={styles.sessionTitleRow}>
-                <View style={styles.runnerRolePill}>
-                  <Text style={styles.runnerRoleText}>RUNNER</Text>
+          {recentGames.length === 0 ? (
+            <View style={styles.emptyRecent}>
+              <Text style={styles.emptyRecentText}>No matches yet. Create a game or join one with a code.</Text>
+            </View>
+          ) : (
+            recentGames.slice(0, 5).map((g) => (
+              <View key={g.id} style={styles.sessionCard}>
+                <View style={styles.sessionCardTop}>
+                  <View style={styles.sessionTitleRow}>
+                    <View style={g.role === 'CHASER' ? styles.chaserRolePill : styles.runnerRolePill}>
+                      <Text style={g.role === 'CHASER' ? styles.chaserRoleText : styles.runnerRoleText}>{g.role}</Text>
+                    </View>
+                    <Text style={styles.sessionName}>{g.name.toUpperCase()}</Text>
+                  </View>
+                  <Text style={styles.sessionDate}>{dateLabel(g.endedAt ?? g.createdAt)}</Text>
                 </View>
-                <Text style={styles.sessionName}>CENTRAL PARK SECTOR</Text>
-              </View>
-              <Text style={styles.sessionDate}>YESTERDAY</Text>
-            </View>
-            <View style={styles.sessionCardBottom}>
-              <Text style={styles.winTag}>✓ SURVIVED (WIN)</Text>
-              <Text style={styles.sessionDuration}>DURATION 45:10</Text>
-            </View>
-          </View>
-
-          {/* Session 2 */}
-          <View style={styles.sessionCard}>
-            <View style={styles.sessionCardTop}>
-              <View style={styles.sessionTitleRow}>
-                <View style={styles.chaserRolePill}>
-                  <Text style={styles.chaserRoleText}>CHASER</Text>
+                <View style={styles.sessionCardBottom}>
+                  {g.cancelled ? (
+                    <Text style={styles.elimTag}>✕ CANCELLED</Text>
+                  ) : g.won ? (
+                    <Text style={styles.winTag}>
+                      {g.role === 'RUNNER' ? '✓ SURVIVED (WIN)' : `🎯 ${g.stats?.tags ?? 0} TAGS (WIN)`}
+                    </Text>
+                  ) : (
+                    <Text style={styles.elimTag}>✕ LOST</Text>
+                  )}
+                  <Text style={styles.sessionDuration}>{g.durationMin !== undefined ? `DURATION ${g.durationMin} MIN` : '—'}</Text>
                 </View>
-                <Text style={styles.sessionName}>SOHO GRID SHRINK</Text>
               </View>
-              <Text style={styles.sessionDate}>OCT 12</Text>
-            </View>
-            <View style={styles.sessionCardBottom}>
-              <Text style={styles.winTag}>🎯 3 TAGS (WIN)</Text>
-              <Text style={styles.sessionDuration}>DURATION 22:45</Text>
-            </View>
-          </View>
-
-          {/* Session 3 */}
-          <View style={styles.sessionCard}>
-            <View style={styles.sessionCardTop}>
-              <View style={styles.sessionTitleRow}>
-                <View style={styles.runnerRolePill}>
-                  <Text style={styles.runnerRoleText}>RUNNER</Text>
-                </View>
-                <Text style={styles.sessionName}>BROOKLYN NAVY YARD</Text>
-              </View>
-              <Text style={styles.sessionDate}>OCT 08</Text>
-            </View>
-            <View style={styles.sessionCardBottom}>
-              <Text style={styles.elimTag}>⏱ TAGGED AT 14:22</Text>
-              <Text style={styles.sessionDuration}>TOTAL 18:00</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Tactical Satellite Footer */}
-        <View style={styles.satelliteFooter}>
-          <Text style={styles.satelliteText}>NEXT SATELLITE WINDOW: 04:19 UTC</Text>
-          <View style={styles.greenPip} />
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -671,4 +676,13 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
   },
+  rejoinBtn: {
+    backgroundColor: colors.accentPrimary,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  rejoinBtnText: { ...typography.labelMonoSm, color: colors.textInverse, fontWeight: '800' },
+  emptyRecent: { padding: spacing.md, backgroundColor: colors.surface, borderRadius: radii.card },
+  emptyRecentText: { ...typography.bodyMd, color: colors.textSecondary, fontSize: 13 },
 });

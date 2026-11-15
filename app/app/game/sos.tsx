@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
+import { useLobbyStore } from '../../src/stores/lobbyStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useLiveGameStore } from '../../src/stores/liveGameStore';
@@ -164,8 +165,14 @@ export default function SosEmergencyScreen() {
           onPress: () => {
             if (gameId && isSocketConnected()) {
               getSocket().emit(SOCKET_EVENTS.SOS_RESOLVED, { gameId });
+              getSocket().emit(SOCKET_EVENTS.GAME_LEAVE, { gameId }); // drops you out of the match for real
             }
             router.replace('/home');
+            // give the socket a moment to flush before tearing it down
+            setTimeout(() => {
+              useLiveGameStore.getState().resetGame();
+              useLobbyStore.getState().disconnectLobby();
+            }, 400);
           },
         },
       ]

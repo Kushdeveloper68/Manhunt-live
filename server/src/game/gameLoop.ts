@@ -15,12 +15,17 @@ import { buildMatchSummary } from './matchSummary.js';
 import { persistMatchResult } from '../services/stats.js';
 import { sendPushToUsers } from '../services/push.js';
 import { emitToUser } from '../socket/emit.js';
+import { isOnline, presenceAvailable } from '../socket/presence.js';
 import { Game } from '../models/Game.js';
 import { GameEvent } from '../models/GameEvent.js';
 import { logger } from '../logger.js';
 
 /** Ended games stay in memory this long so late clients can still fetch the result. */
 const ENDED_GAME_RETENTION_MS = 10 * 60 * 1000;
+/** Host offline this long: another active player takes over (SOS alerts go to the host). */
+export const HOST_TRANSFER_AFTER_MS = 2 * 60 * 1000;
+/** A player offline this long is treated as having left the match (no ghost players). */
+export const OFFLINE_ELIMINATION_AFTER_MS = 5 * 60 * 1000;
 
 class GameLoopManager {
   private io: Server | null = null;
@@ -128,6 +133,9 @@ class GameLoopManager {
   private async processGame(state: LiveGameState, now: number) {
     if (!this.io) return;
     const roomName = `game:${state.gameId}`;
+
+    await this.managePresence(state, now);
+    if (state.status === 'ended') return;
 
     // 1. Countdown (head-start) -> running transition
     if (state.status === 'countdown') {
@@ -286,6 +294,48 @@ class GameLoopManager {
         body: 'Runner positions are about to be revealed.',
         data: { type: 'REVEAL_WARNING', gameId: state.gameId },
       });
+    }
+  }
+
+  /**
+   * Keeps the match healthy when people drop off:
+   * - host offline for a while -> the next active online player becomes host
+   * - a player offline for a long time -> counts as having left (so the match can still end)
+   * Players who reconnect in time (rejoin) are unaffected.
+   */
+  async managePresence(state: LiveGameState, now: number) {
+    if (!presenceAvailable()) return;
+    const offline = (state.offlineSince ??= new Map());
+
+    for (const p of state.players) {
+      if (p.status !== 'ACTIVE') {
+        offline.delete(p.userId);
+        continue;
+      }
+      if (isOnline(p.userId)) offline.delete(p.userId);
+      else if (!offline.has(p.userId)) offline.set(p.userId, now);
+    }
+
+    const hostSince = offline.get(state.hostId);
+    if (hostSince !== undefined && now - hostSince > HOST_TRANSFER_AFTER_MS) {
+      const next = state.players.find((p) => p.status === 'ACTIVE' && p.userId !== state.hostId && !offline.has(p.userId));
+      if (next) {
+        state.hostId = next.userId;
+        for (const p of state.players) p.isHost = p.userId === next.userId;
+        await gameStateStore.set(state.gameId, state);
+        if (mongoose.isValidObjectId(state.gameId) && mongoose.isValidObjectId(next.userId)) {
+          await Game.updateOne({ _id: state.gameId }, { $set: { hostId: next.userId } }).catch(() => {});
+        }
+        await this.broadcastFilteredState(state);
+        logger.info(`Host of game ${state.code} offline: @${next.username} is the new host`);
+      }
+    }
+
+    for (const [userId, since] of [...offline.entries()]) {
+      if (now - since > OFFLINE_ELIMINATION_AFTER_MS) {
+        offline.delete(userId);
+        await this.eliminatePlayer(state, userId, 'LEFT_GAME');
+      }
     }
   }
 

@@ -13,6 +13,10 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLiveGameStore } from '../../src/stores/liveGameStore';
 import { useAuthStore } from '../../src/stores/authStore';
+import { serverNow } from '../../src/stores/liveGameStore';
+import { useConnectionStore } from '../../src/stores/connectionStore';
+import { formatAge } from '@manhunt/shared';
+import { GameMap } from '../../src/components/map/GameMap';
 import { colors, typography, spacing, radii } from '../../src/theme/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -26,10 +30,13 @@ export default function SpectatorScreen() {
     startedAt,
     players,
     teammateLocations,
+    runnerSnapshots,
+    chaserSnapshots,
     eliminatedData,
     matchEnd,
     resetGame,
   } = useLiveGameStore();
+  const connected = useConnectionStore((st) => st.connected);
 
   // When the match ends while spectating, show the result screen
   useEffect(() => {
@@ -47,9 +54,7 @@ export default function SpectatorScreen() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (startedAt) {
-        setMatchElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
-      } else {
-        setMatchElapsedSec((prev) => prev + 1);
+        setMatchElapsedSec(Math.max(0, Math.floor((serverNow() - startedAt) / 1000)));
       }
     }, 1000);
     return () => clearInterval(interval);
@@ -68,43 +73,35 @@ export default function SpectatorScreen() {
     [players]
   );
 
-  // List of active operatives to cycle through
+  // Players still in the match, with their real last known position
   const operativeList = useMemo(() => {
-    if (players.length > 0) {
-      return players
-        .filter((p) => p.status === 'ACTIVE')
-        .map((p, idx) => ({
-          name: `@${p.username.toUpperCase()}`,
-          role: p.role,
-          sub:
-            p.role === 'RUNNER'
-              ? `RUNNER • ${120 + idx * 85}M ${['WEST', 'SOUTH-EAST', 'NORTH'][idx % 3]}`
-              : `CHASER • PURSUING`,
-        }));
-    }
-    // Fallback default operatives matching Stitch mockup
-    return [
-      { name: '@NEON_HARE', role: 'RUNNER', sub: 'NEAREST RUNNER • 142M WEST' },
-      { name: '@CIPHER_88', role: 'RUNNER', sub: 'RUNNER • 380M SOUTH-EAST' },
-      { name: '@ECHO_TRACE', role: 'RUNNER', sub: 'RUNNER • 490M EAST (PINNED)' },
-      { name: '@KRONOS_9', role: 'CHASER', sub: 'LEAD CHASER • PURSUING CIPHER' },
-    ];
-  }, [players]);
+    return players
+      .filter((p) => p.status === 'ACTIVE')
+      .map((p) => {
+        const live = teammateLocations.find((l) => l.userId === p.userId);
+        const snap = [...runnerSnapshots, ...chaserSnapshots].find((x) => x.userId === p.userId);
+        const coords = live?.coordinates ?? snap?.coordinates ?? null;
+        const sub = live
+          ? `${p.role} • LIVE`
+          : snap
+            ? `${p.role} • LAST SEEN ${formatAge(serverNow() - snap.timestamp).toUpperCase()}`
+            : `${p.role} • NO SIGNAL YET`;
+        return { name: `@${p.username.toUpperCase()}`, role: p.role, sub, coords };
+      });
+  }, [players, teammateLocations, runnerSnapshots, chaserSnapshots, matchElapsedSec]);
 
-  const currentOperative = operativeList[selectedOperativeIndex % operativeList.length] || {
-    name: '@NEON_HARE',
-    role: 'RUNNER',
-    sub: 'NEAREST RUNNER • 142M WEST',
-  };
+  const currentOperative = operativeList.length
+    ? operativeList[selectedOperativeIndex % operativeList.length]
+    : { name: 'NO PLAYERS', role: 'RUNNER', sub: 'Waiting for players', coords: null as { latitude: number; longitude: number } | null };
 
   function handlePrevOperative() {
     setSelectedOperativeIndex((prev) =>
-      prev === 0 ? operativeList.length - 1 : prev - 1
+      prev === 0 ? Math.max(0, operativeList.length - 1) : prev - 1
     );
   }
 
   function handleNextOperative() {
-    setSelectedOperativeIndex((prev) => (prev + 1) % operativeList.length);
+    setSelectedOperativeIndex((prev) => (prev + 1) % Math.max(1, operativeList.length));
   }
 
   function handleExitSession() {
@@ -131,10 +128,18 @@ export default function SpectatorScreen() {
     return `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const taggedByName = eliminatedData?.taggedBy || 'KRONOS_9';
-  const taggedAtTime = eliminatedData?.taggedAt
+  const outCause = eliminatedData?.taggedBy;
+  const outTime = eliminatedData?.taggedAt
     ? new Date(eliminatedData.taggedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '14:22';
+    : null;
+  const outReason =
+    outCause === 'ZONE BREACH'
+      ? 'REMOVED FOR LEAVING THE ZONE'
+      : outCause === 'LEFT GAME'
+        ? 'YOU LEFT THE MATCH'
+        : outCause
+          ? `TAGGED${outTime ? ` AT ${outTime}` : ''} BY @${outCause.toUpperCase()}`
+          : 'YOU ARE OUT OF THE MATCH';
 
   return (
     <View style={styles.container}>
@@ -165,7 +170,7 @@ export default function SpectatorScreen() {
               <View>
                 <Text style={styles.bannerHeadline}>YOU'RE OUT</Text>
                 <Text style={styles.bannerSub}>
-                  TAGGED AT {taggedAtTime} BY @{taggedByName.toUpperCase()}
+                  {outReason}
                 </Text>
               </View>
             </View>
@@ -204,99 +209,28 @@ export default function SpectatorScreen() {
               <View style={styles.counterItem}>
                 <View style={[styles.statusDot, { backgroundColor: colors.roleRunner }]} />
                 <Text style={styles.counterText}>
-                  {activeRunners.length || 3} / {totalRunners.length || 12} ALIVE
+                  {activeRunners.length} / {totalRunners.length} ALIVE
                 </Text>
               </View>
 
               <View style={styles.counterItem}>
                 <View style={[styles.statusDot, { backgroundColor: '#C7003A' }]} />
                 <Text style={styles.counterText}>
-                  {activeChasers.length || 4} HUNTING
+                  {activeChasers.length} HUNTING
                 </Text>
               </View>
             </View>
           </View>
 
           <View style={styles.satLinkBanner}>
-            <Text style={styles.satLinkTitle}>ALL OPERATIVE GPS FEEDS UNLOCKED</Text>
-            <Text style={styles.satLinkStatus}>SAT-LINK ONLINE</Text>
+            <Text style={styles.satLinkTitle}>LIVE VIEW OF ALL PLAYERS</Text>
+            <Text style={styles.satLinkStatus}>{connected ? 'CONNECTED' : 'RECONNECTING'}</Text>
           </View>
         </View>
 
         {/* Global God-View Tactical Map Viewport */}
         <View style={styles.mapViewport}>
-          {/* Grid lines background */}
-          <View style={styles.gridOverlay}>
-            <View style={[styles.gridLineH, { top: '25%' }]} />
-            <View style={[styles.gridLineH, { top: '50%' }]} />
-            <View style={[styles.gridLineH, { top: '75%' }]} />
-            <View style={[styles.gridLineV, { left: '33%' }]} />
-            <View style={[styles.gridLineV, { left: '66%' }]} />
-          </View>
-
-          {/* Safe Zone Boundary Circle */}
-          <View style={styles.safeZoneCircle}>
-            <View style={styles.safeZoneDashed}>
-              <View style={styles.safeZonePill}>
-                <Text style={styles.safeZoneText}>SAFE ZONE BOUNDARY</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Restricted Sector Warning Chip */}
-          <View style={styles.restrictedSectorChip}>
-            <Text style={{ fontSize: 11 }}>⚠️</Text>
-            <Text style={styles.restrictedSectorText}>RESTRICTED SECTOR NORTH</Text>
-          </View>
-
-          {/* "YOU FELL HERE" marker */}
-          <View style={styles.fellHereMarker}>
-            <View style={styles.fellHereIconCircle}>
-              <Text style={{ fontSize: 16 }}>💀</Text>
-            </View>
-            <View style={styles.fellHerePill}>
-              <Text style={styles.fellHereText}>YOU FELL HERE</Text>
-            </View>
-          </View>
-
-          {/* Runner operative markers (Cyan) */}
-          <View style={[styles.operativeMarker, { top: '26%', left: '22%' }]}>
-            <View style={styles.runnerPingHalo} />
-            <View style={styles.runnerDot} />
-            <Text style={styles.runnerTag}>@NEON_HARE</Text>
-          </View>
-
-          <View style={[styles.operativeMarker, { top: '62%', left: '70%' }]}>
-            <View style={styles.runnerDot} />
-            <Text style={styles.runnerTag}>@CIPHER_88</Text>
-          </View>
-
-          <View style={[styles.operativeMarker, { top: '34%', left: '76%' }]}>
-            <View style={styles.runnerDot} />
-            <Text style={styles.runnerTag}>@ECHO_TRACE</Text>
-          </View>
-
-          {/* Chaser operative markers (Crimson chevrons) */}
-          <View style={[styles.operativeMarker, { top: '20%', left: '42%' }]}>
-            <View style={styles.chaserChevron} />
-            <Text style={styles.chaserTag}>@KRONOS_9</Text>
-          </View>
-
-          <View style={[styles.operativeMarker, { top: '50%', left: '32%' }]}>
-            <View style={styles.chaserChevron} />
-            <Text style={styles.chaserTag}>@APEX</Text>
-          </View>
-
-          <View style={[styles.operativeMarker, { top: '74%', left: '52%' }]}>
-            <View style={styles.chaserChevron} />
-            <Text style={styles.chaserTag}>@VIPER</Text>
-          </View>
-
-          {/* Live Radar Watermark */}
-          <View style={styles.radarWatermark}>
-            <View style={styles.radarDot} />
-            <Text style={styles.radarText}>RADAR: 30FPS REALTIME</Text>
-          </View>
+          <GameMap spectator bottomInset={12} focus={cameraMode === 'lock' ? currentOperative.coords : null} />
         </View>
 
         {/* Tactical Camera Lock Switcher */}

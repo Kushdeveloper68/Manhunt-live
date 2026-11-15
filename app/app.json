@@ -64,7 +64,8 @@
           "locationAlwaysAndWhenInUsePermission": "MANHUNT LIVE tracks your location, even with the screen off, to power the real-world GPS pursuit game."
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true

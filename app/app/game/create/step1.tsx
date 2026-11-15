@@ -17,7 +17,7 @@ export default function CreateStep1Basics() {
   const router = useRouter();
   const { draft, setDraftBasics } = useGameStore();
 
-  const [matchName, setMatchName] = useState(draft.name || 'CENTRAL PARK PURSUIT');
+  const [matchName, setMatchName] = useState(draft.name || 'MY MANHUNT');
   const [selectedMode, setSelectedMode] = useState<'Classic Manhunt' | 'Last Runner Standing'>(
     draft.mode || 'Classic Manhunt'
   );

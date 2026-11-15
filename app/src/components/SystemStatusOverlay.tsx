@@ -123,7 +123,7 @@ export function SystemStatusOverlay() {
   if (banners.length === 0) return null;
 
   return (
-    <View style={[styles.wrap, { top: insets.top + 100 }]} pointerEvents="box-none">
+    <View style={[styles.wrap, { top: insets.top + 230 }]} pointerEvents="box-none">
       {banners.map((b) => (
         <View key={b.key} style={[styles.card, b.tone === 'danger' ? styles.danger : styles.warning]}>
           <Text style={styles.icon}>{b.icon}</Text>

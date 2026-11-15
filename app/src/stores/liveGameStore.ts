@@ -9,6 +9,7 @@ import {
   ZoneSettings,
   GamePlayer,
   MatchSummary,
+  NoGoZone,
   SOCKET_EVENTS,
 } from '@manhunt/shared';
 import { getSocket, isSocketConnected } from '../services/socket';
@@ -33,8 +34,27 @@ interface LiveGameStateProps {
   myHeading: number;
   teammateLocations: LivePlayerLocation[];
   runnerSnapshots: RunnerSnapshot[];
+  /** BOTH_WAYS only: last revealed chaser positions, shown to runners */
+  chaserSnapshots: RunnerSnapshot[];
+  noGoZones: NoGoZone[];
+  /** how often reveals happen (for the countdown progress bar) */
+  revealIntervalMin: number;
+  /** server clock minus this phone's clock, so countdowns match the server even if the phone clock is off */
+  clockOffsetMs: number;
+  /** "zone shrinks in N s": set 60 s before a shrink, cleared when the zone actually changes */
+  shrinkWarning: { stage: number; shrinksAtLocal: number; nextZone: ZoneSettings } | null;
   players: GamePlayer[];
-  zoneViolation: { distanceOutsideMeters: number; penalty: string } | null;
+  zoneViolation: {
+    distanceOutsideMeters: number;
+    penalty: string;
+    reason?: string;
+    zoneName?: string;
+    secondsInBreach?: number;
+    countdownSec?: number;
+    action?: string;
+    message?: string;
+    receivedAt: number;
+  } | null;
   matchEnd: { winnerRole: string; reason: string; summary?: MatchSummary } | null;
   /** Host only: players whose SOS is currently active */
   incomingSos: Record<string, { userId: string; username: string; coordinates: { latitude: number; longitude: number } | null; timestamp: number }>;
@@ -79,6 +99,11 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
   myHeading: 0,
   teammateLocations: [],
   runnerSnapshots: [],
+  chaserSnapshots: [],
+  noGoZones: [],
+  revealIntervalMin: 2,
+  clockOffsetMs: 0,
+  shrinkWarning: null,
   players: [],
   zoneViolation: null,
   matchEnd: null,
@@ -105,6 +130,11 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
       nextShrinkTimestamp: initialState.nextShrinkTimestamp,
       teammateLocations: initialState.teammateLocations || [],
       runnerSnapshots: initialState.runnerSnapshots || [],
+      chaserSnapshots: initialState.chaserSnapshots || [],
+      noGoZones: initialState.settings.noGoZones || [],
+      revealIntervalMin: initialState.settings.revealIntervalMin || 2,
+      clockOffsetMs: initialState.serverTime ? initialState.serverTime - Date.now() : 0,
+      shrinkWarning: null,
       players: initialState.players || [],
       matchEnd: null,
       incomingSos: {},
@@ -131,7 +161,7 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
 
       // Listen for reveal tick pings (Chasers receive runner snapshots; runners get exposed alert)
       socket.off(SOCKET_EVENTS.REVEAL_TICK);
-      socket.on(SOCKET_EVENTS.REVEAL_TICK, (data: { snapshots: RunnerSnapshot[]; nextRevealTimestamp: number }) => {
+      socket.on(SOCKET_EVENTS.REVEAL_TICK, (data: { snapshots: RunnerSnapshot[]; chaserSnapshots?: RunnerSnapshot[]; nextRevealTimestamp: number }) => {
         const { myRole } = get();
         if (myRole === 'CHASER') {
           set({
@@ -139,8 +169,10 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
             nextRevealTimestamp: data.nextRevealTimestamp,
           });
         } else if (myRole === 'RUNNER') {
+          // Runners learn that THEY were revealed; positions only arrive in BOTH_WAYS mode
           set({
             exposedAlert: true,
+            chaserSnapshots: data.chaserSnapshots ?? get().chaserSnapshots,
             nextRevealTimestamp: data.nextRevealTimestamp,
           });
         }
@@ -148,19 +180,37 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
 
       // Listen for zone shrinking & updates
       socket.off(SOCKET_EVENTS.ZONE_UPDATE);
-      socket.on(SOCKET_EVENTS.ZONE_UPDATE, (data: { zone: ZoneSettings }) => {
-        set({ currentZone: data.zone });
+      socket.on(SOCKET_EVENTS.ZONE_UPDATE, (data: { zone: ZoneSettings; nextShrinkTimestamp?: number }) => {
+        set({ currentZone: data.zone, nextShrinkTimestamp: data.nextShrinkTimestamp, shrinkWarning: null });
+      });
+
+      socket.off(SOCKET_EVENTS.ZONE_SHRINK_WARNING);
+      socket.on(SOCKET_EVENTS.ZONE_SHRINK_WARNING, (d: { stage: number; secondsLeft: number; nextZone: ZoneSettings }) => {
+        Vibration.vibrate([0, 150, 100, 150]);
+        set({ shrinkWarning: { stage: d.stage, shrinksAtLocal: Date.now() + d.secondsLeft * 1000, nextZone: d.nextZone } });
       });
 
       // Listen for zone violation alerts
       socket.off(SOCKET_EVENTS.ZONE_VIOLATION);
-      socket.on(SOCKET_EVENTS.ZONE_VIOLATION, (data: { userId: string; inViolation?: boolean; distanceOutsideMeters: number; penalty: string }) => {
+      socket.on(SOCKET_EVENTS.ZONE_VIOLATION, (data: { userId: string; inViolation?: boolean; distanceOutsideMeters: number; penalty: string; reason?: string; zoneName?: string; secondsInBreach?: number; countdownSec?: number; action?: string; message?: string }) => {
         if (data.userId !== currentUserId) return;
         if (data.inViolation === false) {
           set({ zoneViolation: null }); // back inside the zone
           return;
         }
-        set({ zoneViolation: { distanceOutsideMeters: data.distanceOutsideMeters, penalty: data.penalty } });
+        set({
+          zoneViolation: {
+            distanceOutsideMeters: data.distanceOutsideMeters,
+            penalty: data.penalty,
+            reason: data.reason,
+            zoneName: data.zoneName,
+            secondsInBreach: data.secondsInBreach,
+            countdownSec: data.countdownSec,
+            action: data.action,
+            message: data.message,
+            receivedAt: Date.now(),
+          },
+        });
       });
 
       // Listen for incoming TAG_ATTEMPT (for runner)
@@ -211,6 +261,8 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
           players: sync.players,
           teammateLocations: sync.teammateLocations,
           runnerSnapshots: sync.runnerSnapshots,
+          chaserSnapshots: sync.chaserSnapshots ?? [],
+          clockOffsetMs: sync.serverTime ? sync.serverTime - Date.now() : get().clockOffsetMs,
           currentZone: sync.currentZone,
           status: sync.status,
           nextRevealTimestamp: sync.nextRevealTimestamp,
@@ -288,6 +340,10 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
 
   resetGame: () =>
     set({
+      chaserSnapshots: [],
+      noGoZones: [],
+      shrinkWarning: null,
+      clockOffsetMs: 0,
       gameId: null,
       code: null,
       name: null,
@@ -311,3 +367,8 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
       eliminatedData: null,
     }),
 }));
+
+/** The server's idea of "now" (ms), so countdowns are right even if this phone's clock is wrong. */
+export function serverNow(): number {
+  return Date.now() + useLiveGameStore.getState().clockOffsetMs;
+}

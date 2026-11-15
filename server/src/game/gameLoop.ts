@@ -199,15 +199,14 @@ class GameLoopManager {
         nextRevealTimestamp: state.nextRevealAt,
       });
 
-      // BOTH_WAYS: runners receive CHASER snapshots (never their own team's)
-      if (bothWays) {
-        this.broadcastToRole(state, 'RUNNER', SOCKET_EVENTS.REVEAL_TICK, {
-          gameId: state.gameId,
-          snapshots: [],
-          chaserSnapshots,
-          nextRevealTimestamp: state.nextRevealAt,
-        });
-      }
+      // Runners are ALWAYS told a reveal just happened ("you were exposed") but get no positions,
+      // except in BOTH_WAYS mode where they receive the CHASER snapshots (never their own team's).
+      this.broadcastToRole(state, 'RUNNER', SOCKET_EVENTS.REVEAL_TICK, {
+        gameId: state.gameId,
+        snapshots: [],
+        chaserSnapshots,
+        nextRevealTimestamp: state.nextRevealAt,
+      });
 
       logger.debug(`Reveal tick fired for game ${state.code}: ${newSnapshots.length} runners pinged`);
     }
@@ -219,7 +218,8 @@ class GameLoopManager {
       state.currentZone = shrinkZone(state.currentZone, state.settings.zoneShrink.percent || 25);
       const shrink = state.settings.zoneShrink;
       const shrinkIntervalMs = (shrink.intervalMin ?? shrink.startAfterMin ?? 30) * 60 * 1000;
-      state.nextShrinkAt = now + shrinkIntervalMs;
+      // After the last stage there is nothing left to count down to
+      state.nextShrinkAt = state.shrinkStage < maxStages ? now + shrinkIntervalMs : undefined;
       await gameStateStore.set(state.gameId, state);
 
       this.io.to(roomName).emit(SOCKET_EVENTS.ZONE_SHRINKING, {
@@ -230,6 +230,7 @@ class GameLoopManager {
       this.io.to(roomName).emit(SOCKET_EVENTS.ZONE_UPDATE, {
         gameId: state.gameId,
         zone: state.currentZone,
+        nextShrinkTimestamp: state.nextShrinkAt,
       });
     }
 
@@ -252,6 +253,13 @@ class GameLoopManager {
       state.shrinkWarnedStage !== state.shrinkStage
     ) {
       state.shrinkWarnedStage = state.shrinkStage;
+      // In-app countdown + preview of the next zone (push covers players with the app closed)
+      this.io?.to(`game:${state.gameId}`).emit(SOCKET_EVENTS.ZONE_SHRINK_WARNING, {
+        gameId: state.gameId,
+        stage: state.shrinkStage + 1,
+        secondsLeft: Math.max(0, Math.round((state.nextShrinkAt - now) / 1000)),
+        nextZone: shrinkZone(state.currentZone, state.settings.zoneShrink.percent || 25),
+      });
       void sendPushToUsers(activeIds, {
         title: 'Zone shrinking soon',
         body: 'The play zone shrinks in about 60 seconds. Move inside the new boundary.',

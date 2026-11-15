@@ -13,17 +13,20 @@ import { useRouter } from 'expo-router';
 import { colors, spacing, radii, typography } from '../../../src/theme/theme';
 import { Button } from '../../../src/components/Button';
 import { useGameStore } from '../../../src/stores/gameStore';
+import { ZonePickerMap } from '../../../src/components/map/ZonePickerMap';
 
 export default function CreateStep2Zone() {
   const router = useRouter();
-  const { draft, setDraftZone, removeNoGoZone } = useGameStore();
+  const { draft, setDraftZone, addNoGoZone, removeNoGoZone } = useGameStore();
 
   const [radiusMeters, setRadiusMeters] = useState(draft.settings.zone.radius || 1500);
   const [centerCoord, setCenterCoord] = useState(
     draft.settings.zone.center || { latitude: 40.78509, longitude: -73.96828 }
   );
   const [noGoZones, setNoGoZones] = useState(draft.settings.noGoZones || []);
-  const [isDrawing, setIsDrawing] = useState(false);
+  // null = not drawing; otherwise the vertices of the no-go zone being outlined
+  const [drawingPoints, setDrawingPoints] = useState<{ latitude: number; longitude: number }[] | null>(null);
+  const isDrawing = drawingPoints !== null;
   const [locating, setLocating] = useState(false);
 
   // Centre the zone on where the host really is (the old default was New York)
@@ -56,18 +59,20 @@ export default function CreateStep2Zone() {
     setNoGoZones((prev) => prev.filter((z) => z.id !== id));
   };
 
+  // Real no-go zones: tap 3+ points on the map to outline an area, then finish
   const handleAddNoGo = () => {
-    const newId = `nogo_${Date.now()}`;
-    const newZone = {
-      id: newId,
-      name: 'HIGHWAY CORRIDOR',
-      polygon: [
-        { latitude: centerCoord.latitude + 0.005, longitude: centerCoord.longitude - 0.005 },
-        { latitude: centerCoord.latitude + 0.008, longitude: centerCoord.longitude },
-        { latitude: centerCoord.latitude + 0.005, longitude: centerCoord.longitude + 0.005 },
-      ],
-    };
-    setNoGoZones((prev) => [...prev, newZone]);
+    if (!drawingPoints) {
+      setDrawingPoints([]);
+      return;
+    }
+    if (drawingPoints.length < 3) {
+      Alert.alert('Need 3 points', 'Tap at least 3 points on the map to outline the restricted area.');
+      return;
+    }
+    const zone = { id: `nogo_${Date.now()}`, name: `NO-GO ${noGoZones.length + 1}`, polygon: drawingPoints };
+    addNoGoZone(zone); // saved in the game draft, so it is sent to the server
+    setNoGoZones((prev) => [...prev, zone]);
+    setDrawingPoints(null);
   };
 
   const goNext = () => {
@@ -115,7 +120,7 @@ export default function CreateStep2Zone() {
         {/* Tactical Map Canvas */}
         <View style={styles.mapCanvas}>
           {/* Top telemetry floating bar */}
-          <View style={styles.mapTopBar}>
+          <View style={[styles.mapTopBar, { zIndex: 5 }]}>
             <View style={styles.coordPill}>
               <View style={styles.pulseDot} />
               <Text style={styles.coordText}>
@@ -131,39 +136,18 @@ export default function CreateStep2Zone() {
             </Pressable>
           </View>
 
-          {/* No-Go Zone Restricted Overlay */}
-          {noGoZones.length > 0 && (
-            <View style={styles.noGoOverlayBox}>
-              <View style={styles.noGoTag}>
-                <Text style={styles.noGoTagText}>⚠ RESTRICTED</Text>
-              </View>
-              <Text style={styles.noGoTitle}>{noGoZones[0].name}</Text>
-            </View>
-          )}
-
-          {/* Dynamic Zone Perimeter Circle */}
-          <View
-            style={[
-              styles.zoneHalo,
-              {
-                width: Math.min(260, Math.max(140, 140 + ((radiusMeters - 500) / 9500) * 120)),
-                height: Math.min(260, Math.max(140, 140 + ((radiusMeters - 500) / 9500) * 120)),
-              },
-            ]}
-          >
-            <View style={styles.crosshairH} />
-            <View style={styles.crosshairV} />
-            <View style={styles.zoneOriginPin}>
-              <View style={styles.originDot} />
-            </View>
-            <View style={styles.originLabel}>
-              <Text style={styles.originLabelText}>ZONE ORIGIN</Text>
-            </View>
-          </View>
-
-          {/* Compass bearing */}
-          <View style={styles.compassBox}>
-            <Text style={styles.compassText}>🧭 042° NE</Text>
+          <ZonePickerMap
+            center={centerCoord}
+            radius={radiusMeters}
+            onCenterChange={setCenterCoord}
+            noGoZones={noGoZones}
+            drawingPoints={drawingPoints}
+            onAddPoint={(p) => setDrawingPoints((prev) => [...(prev ?? []), p])}
+          />
+          <View pointerEvents="none" style={styles.mapHint}>
+            <Text style={styles.mapHintText}>
+              {isDrawing ? `OUTLINING NO-GO ZONE: ${drawingPoints!.length} POINT(S)` : 'TAP THE MAP TO MOVE THE ZONE'}
+            </Text>
           </View>
         </View>
 
@@ -247,18 +231,23 @@ export default function CreateStep2Zone() {
           >
             <Text style={styles.addNoGoIcon}>⌕</Text>
             <Text style={styles.addNoGoText}>
-              {isDrawing ? 'TAP MAP TO DELINEATE' : 'ADD NO-GO ZONE'}
+              {isDrawing ? (drawingPoints!.length < 3 ? `TAP MAP (${drawingPoints!.length}/3)` : 'FINISH NO-GO ZONE') : 'DRAW NO-GO ZONE'}
             </Text>
           </Pressable>
+          {isDrawing && (
+            <Pressable style={[styles.addNoGoBtn, { marginTop: spacing.sm }]} onPress={() => setDrawingPoints(null)}>
+              <Text style={styles.addNoGoText}>CANCEL DRAWING</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Dynamic Collapse Snippet */}
         <View style={styles.guidanceBox}>
           <Text style={styles.guidanceIcon}>📍</Text>
           <View style={styles.guidanceContent}>
-            <Text style={styles.guidanceTitle}>Dynamic Collapse Enabled</Text>
+            <Text style={styles.guidanceTitle}>Zone Shrink</Text>
             <Text style={styles.guidanceDesc}>
-              The circle constricts 200m every 8 minutes, forcing Chasers and Runners into closer proximity.
+              You choose when and how much the circle shrinks in the next step (Rules).
             </Text>
           </View>
         </View>
@@ -680,4 +669,14 @@ const styles = StyleSheet.create({
   bottomActions: {
     marginTop: spacing.xs,
   },
+  mapHint: {
+    position: 'absolute',
+    bottom: 10,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(10,10,10,0.8)',
+    borderRadius: radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  mapHintText: { color: colors.textPrimary, ...typography.labelMonoSm, fontSize: 10, fontWeight: '700' },
 });

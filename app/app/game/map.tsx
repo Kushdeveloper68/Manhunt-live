@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,11 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/stores/authStore';
-import { useLiveGameStore } from '../../src/stores/liveGameStore';
+import { useLiveGameStore, serverNow } from '../../src/stores/liveGameStore';
+import { useTrackingStore } from '../../src/stores/trackingStore';
+import { compassPoint, formatAge, formatDistance, metersInsideZone, nearestOf } from '@manhunt/shared';
+import { GameMap, GameMapHandle } from '../../src/components/map/GameMap';
+import { ZoneBreachAlert, ZoneBreachVignette, ShrinkWarningBanner, HeadStartBanner } from '../../src/components/map/MapAlerts';
 import { startLocationTracking, stopLocationTracking } from '../../src/services/location';
 import { colors, typography, spacing, radii } from '../../src/theme/theme';
 import { SosBanner } from '../../src/components/SosBanner';
@@ -22,47 +26,48 @@ import { useGeofenceHaptics } from '../../src/services/haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+const mmss = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+
 export default function LiveMapScreen() {
   useGeofenceHaptics();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const mapRef = useRef<GameMapHandle>(null);
 
-  const user = useAuthStore((s) => s.user);
   const {
     myRole,
     status,
     startedAt,
-    durationMin,
     currentZone,
     nextRevealTimestamp,
     nextShrinkTimestamp,
+    revealIntervalMin,
     myLocation,
     myHeading,
-    compassHeading,
-    teammateLocations,
+    mySpeed,
+    myAccuracy,
     runnerSnapshots,
+    chaserSnapshots,
     players,
     exposedAlert,
     dismissExposedAlert,
-    zoneViolation,
     matchEnd,
     pendingTagAttempt,
     eliminatedData,
   } = useLiveGameStore();
+  const trackingMode = useTrackingStore((s) => s.mode);
 
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [sosProgress, setSosProgress] = useState(0);
   const sosTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Animations
-  const pingPulseAnim = useRef(new Animated.Value(0)).current;
   const threatPulseAnim = useRef(new Animated.Value(1)).current;
-  const sheetTranslateY = useRef(new Animated.Value(140)).current;
 
-  // Local simulated clocks for HUD if timestamps are present
-  const [matchElapsedSec, setMatchElapsedSec] = useState(0);
-  const [revealCountdownSec, setRevealCountdownSec] = useState(48);
-  const [shrinkCountdownSec, setShrinkCountdownSec] = useState(500);
+  // One clock for every countdown, based on the SERVER's time (phone clocks are often wrong)
+  const [nowMs, setNowMs] = useState(serverNow());
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(serverNow()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const isRunner = myRole === 'RUNNER' || myRole === 'UNASSIGNED';
   const roleColor = isRunner ? colors.roleRunner : colors.roleChaser;
@@ -90,41 +95,17 @@ export default function LiveMapScreen() {
     };
   }, []);
 
-  // Ping ring & threat alert animations
+  // "You are exposed" banner pulse
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(pingPulseAnim, {
-        toValue: 1,
-        duration: 2000,
-        useNativeDriver: true,
-      })
-    ).start();
-
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(threatPulseAnim, { toValue: 0.4, duration: 600, useNativeDriver: true }),
         Animated.timing(threatPulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       ])
-    ).start();
-
-    // 1-second interval for clock updates
-    const clockInterval = setInterval(() => {
-      const now = Date.now();
-      if (startedAt) {
-        setMatchElapsedSec(Math.floor((now - startedAt) / 1000));
-      }
-      if (nextRevealTimestamp) {
-        setRevealCountdownSec(Math.max(0, Math.floor((nextRevealTimestamp - now) / 1000)));
-      } else {
-        setRevealCountdownSec((prev) => (prev > 0 ? prev - 1 : 48));
-      }
-      if (nextShrinkTimestamp) {
-        setShrinkCountdownSec(Math.max(0, Math.floor((nextShrinkTimestamp - now) / 1000)));
-      }
-    }, 1000);
-
-    return () => clearInterval(clockInterval);
-  }, [startedAt, nextRevealTimestamp, nextShrinkTimestamp]);
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
 
   // Navigate when game ends
   useEffect(() => {
@@ -149,7 +130,6 @@ export default function LiveMapScreen() {
       }
     }, 300);
   }
-
   function handleSosPressOut() {
     if (sosTimerRef.current) {
       clearInterval(sosTimerRef.current);
@@ -157,230 +137,140 @@ export default function LiveMapScreen() {
     }
     setSosProgress(0);
   }
-
   function triggerSosEmergency() {
     Vibration.vibrate([100, 200, 100, 200]);
     // The SOS screen does the real work: alerts the host, shows honest status, call/SMS actions
     router.push('/game/sos');
   }
-
   function handleTagAction() {
     Vibration.vibrate([40, 60, 100]);
     router.push('/game/tag');
   }
 
-  function toggleSheet() {
-    const toValue = bottomSheetOpen ? 140 : 0;
-    Animated.spring(sheetTranslateY, {
-      toValue,
-      useNativeDriver: true,
-      friction: 8,
-    }).start();
-    setBottomSheetOpen(!bottomSheetOpen);
-  }
-
-  const formatClock = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
+  // ----- Real numbers for the HUD -----
+  const matchElapsedSec = startedAt ? Math.max(0, Math.floor((nowMs - startedAt) / 1000)) : 0;
+  const revealRemainingSec = nextRevealTimestamp ? Math.max(0, Math.floor((nextRevealTimestamp - nowMs) / 1000)) : null;
+  const revealTotalSec = Math.max(1, revealIntervalMin) * 60;
+  const revealFill = revealRemainingSec === null ? 0 : 1 - Math.min(1, revealRemainingSec / revealTotalSec);
+  const shrinkRemainingSec = nextShrinkTimestamp ? Math.max(0, Math.floor((nextShrinkTimestamp - nowMs) / 1000)) : null;
 
   const activeRunners = players.filter((p) => p.role === 'RUNNER' && p.status === 'ACTIVE');
   const totalRunners = players.filter((p) => p.role === 'RUNNER');
+  const chasers = players.filter((p) => p.role === 'CHASER');
 
-  const pingScale = pingPulseAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.6, 2.2],
-  });
-  const pingOpacity = pingPulseAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.8, 0],
-  });
+  const insideM = myLocation && currentZone ? metersInsideZone(myLocation, currentZone) : null;
+
+  // Nearest revealed enemy position (chasers: runner pings, runners: chaser pings in BOTH_WAYS mode)
+  const pings = isRunner ? chaserSnapshots : runnerSnapshots;
+  const target = myLocation ? nearestOf(myLocation, pings) : null;
+  // Arrow points the way: relative to where you are facing while moving, north-up when standing still
+  const arrowRot = target ? (target.bearing - (mySpeed > 0.8 ? myHeading : 0) + 360) % 360 : 0;
+
+  const playerStatus = (p: (typeof players)[number]) =>
+    p.status === 'ACTIVE' ? (p.role === 'RUNNER' ? 'FREE' : 'ACTIVE') : p.taggedBy === 'ZONE BREACH' || p.taggedBy === 'LEFT GAME' ? 'OUT' : 'TAGGED';
 
   return (
     <View style={styles.container}>
+      <GameMap ref={mapRef} bottomInset={insets.bottom + 150} />
+      <ZoneBreachVignette />
       <SosBanner />
       <HostMatchControls />
-      {/* ——— Full Screen Tactical Map Canvas ——— */}
-      <View style={styles.mapCanvas}>
-        {/* Street Grid Matrix Lines */}
-        <View style={styles.gridOverlay}>
-          <View style={[styles.gridLineH, { top: '25%' }]} />
-          <View style={[styles.gridLineH, { top: '50%' }]} />
-          <View style={[styles.gridLineH, { top: '75%' }]} />
-          <View style={[styles.gridLineV, { left: '25%' }]} />
-          <View style={[styles.gridLineV, { left: '50%' }]} />
-          <View style={[styles.gridLineV, { left: '75%' }]} />
-        </View>
 
-        {/* Circular Safe Zone Boundary */}
-        <View style={styles.safeZoneCircle}>
-          <View style={styles.safeZoneRing} />
-          <Text style={[styles.labelMonoSm, styles.safeZoneLabel]}>
-            SAFE ZONE ACTIVE LIMIT ({(currentZone?.radius || 1500)}M)
-          </Text>
-        </View>
+      {/* Runner: red edge flash right after being revealed */}
+      {isRunner && exposedAlert && <View pointerEvents="none" style={styles.dangerVignette} />}
 
-        {/* Center: Hero Player Pin (YOU) */}
-        <View style={styles.selfPinContainer}>
-          <View style={[styles.selfHeadingCone, { borderColor: roleColor }]} />
-          <View style={[styles.selfPinCore, { backgroundColor: roleColor }]}>
-            <View style={styles.innerDot} />
-          </View>
-          <View style={[styles.selfLabelPill, { backgroundColor: roleColor }]}>
-            <Text style={[styles.labelMonoSm, { color: colors.textInverse, fontWeight: 'bold' }]}>
-              YOU
-            </Text>
-          </View>
-        </View>
-
-        {/* Teammate Pins */}
-        {teammateLocations.map((loc, idx) => (
-          <View
-            key={loc.userId}
-            style={[
-              styles.teammatePin,
-              {
-                top: 180 + idx * 70,
-                left: 60 + idx * 120,
-              },
-            ]}
-          >
-            <View style={[styles.teammateDot, { backgroundColor: roleColor }]} />
-            <Text style={[styles.labelMonoSm, { color: colors.textPrimary }]}>
-              @{loc.username.toUpperCase()}
-            </Text>
-          </View>
-        ))}
-
-        {/* Chaser View: Revealed Runner Pings */}
-        {!isRunner && (
-          <View style={styles.runnerPingContainer}>
-            <Animated.View
-              style={[
-                styles.runnerPingWave,
-                { transform: [{ scale: pingScale }], opacity: pingOpacity },
-              ]}
-            />
-            <View style={styles.runnerPingCore} />
-            <View style={styles.runnerPingTag}>
-              <Text style={[styles.labelMonoSm, { color: colors.roleRunner, fontWeight: 'bold' }]}>
-                LAST SEEN 0:42 AGO (240M NE)
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Runner View: Chaser Radar Threat Echo */}
-        {isRunner && (
-          <View style={styles.threatEchoContainer}>
-            <Animated.View
-              style={[
-                styles.threatEchoRing,
-                { transform: [{ scale: pingScale }], opacity: pingOpacity },
-              ]}
-            />
-            <View style={styles.threatEchoCore} />
-            <View style={styles.threatEchoTag}>
-              <Text style={[styles.labelMonoSm, { color: colors.signalDanger, fontWeight: 'bold' }]}>
-                CHASER PING (180M S)
-              </Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Runner View: Danger Vignette Overlay */}
-      {isRunner && <View pointerEvents="none" style={styles.dangerVignette} />}
-
-      {/* ——— Floating Top HUD Bar ——— */}
+      {/* ——— Floating Top HUD ——— */}
       <View style={[styles.topHudContainer, { paddingTop: insets.top + 8 }]}>
         <View style={styles.hudRow}>
-          {/* Match Duration Clock */}
           <View style={styles.hudCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Text style={{ fontSize: 12 }}>⏱</Text>
-              <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>
-                {isRunner ? 'ELAPSED' : 'MATCH CLOCK'}
-              </Text>
+              <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>{isRunner ? 'ELAPSED' : 'MATCH CLOCK'}</Text>
             </View>
-            <Text style={styles.hudClockText}>{formatClock(matchElapsedSec)}</Text>
+            <Text style={styles.hudClockText}>{mmss(matchElapsedSec)}</Text>
           </View>
 
-          {/* Reveal Countdown Clock */}
           <View style={[styles.hudCard, { flex: 1.1 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={[styles.labelMonoSm, { color: colors.roleRunner }]}>
-                {isRunner ? 'REVEAL IN' : 'NEXT REVEAL'}
-              </Text>
+              <Text style={[styles.labelMonoSm, { color: colors.roleRunner }]}>{isRunner ? 'REVEAL IN' : 'NEXT REVEAL'}</Text>
               <Text style={[styles.hudClockText, { color: colors.roleRunner }]}>
-                {formatClock(revealCountdownSec)}
+                {revealRemainingSec === null ? '--:--' : mmss(revealRemainingSec)}
               </Text>
             </View>
             <View style={styles.revealProgressBar}>
-              <View
-                style={[
-                  styles.revealProgressFill,
-                  { width: `${Math.min(100, Math.max(10, (revealCountdownSec / 60) * 100))}%` },
-                ]}
-              />
+              <View style={[styles.revealProgressFill, { width: `${Math.round(revealFill * 100)}%` }]} />
             </View>
           </View>
 
-          {/* Shrink Timer */}
           <View style={styles.hudCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Animated.View style={[styles.miniDot, { backgroundColor: colors.accentPrimary }]} />
+              <View style={[styles.miniDot, { backgroundColor: colors.accentPrimary }]} />
               <Text style={[styles.labelMonoSm, { color: colors.accentPrimary }]}>SHRINK</Text>
             </View>
             <Text style={[styles.hudClockText, { color: colors.accentPrimary }]}>
-              {formatClock(shrinkCountdownSec)}
+              {shrinkRemainingSec === null ? 'FINAL' : mmss(shrinkRemainingSec)}
             </Text>
           </View>
         </View>
 
-        {/* Chaser View: Compass Strip */}
-        {!isRunner && (
-          <View style={styles.compassStrip}>
-            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>NW</Text>
-            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>330°</Text>
-            <View style={styles.compassActiveTick}>
-              <View style={[styles.miniDot, { backgroundColor: colors.accentPrimary }]} />
-              <Text style={[styles.labelMonoSm, { color: colors.textPrimary, fontWeight: 'bold' }]}>
-                N {String(compassHeading).padStart(3, '0')}°
-              </Text>
-            </View>
-            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>030°</Text>
-            <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>NE</Text>
-          </View>
-        )}
+        <View style={styles.alertStack}>
+          <HeadStartBanner role={myRole} />
+          <ZoneBreachAlert />
+          <ShrinkWarningBanner />
 
-        {/* Runner View: Exposed Alert Banner */}
-        {isRunner && exposedAlert && (
-          <Animated.View style={[styles.exposedBanner, { opacity: threatPulseAnim }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={{ fontSize: 16 }}>⚠️</Text>
-              <Text style={[styles.headlineSm, { color: colors.textPrimary, fontSize: 14 }]}>
-                YOU ARE EXPOSED
-              </Text>
-              <View style={styles.criticalPill}>
-                <Text style={[styles.labelMonoSm, { color: colors.signalDanger, fontWeight: 'bold' }]}>
-                  CRITICAL
+          {/* Nearest revealed position */}
+          {target ? (
+            <View style={styles.nearestCard}>
+              <View style={[styles.nearestArrowBox, { transform: [{ rotate: `${arrowRot}deg` }] }]}>
+                <Text style={styles.nearestArrow}>▲</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.nearestTitle}>{isRunner ? 'NEAREST CHASER PING' : 'NEAREST RUNNER PING'}</Text>
+                <Text style={styles.nearestBody}>
+                  {formatDistance(target.meters)} {compassPoint(target.bearing)} · @{target.item.username} ·{' '}
+                  {formatAge(nowMs - target.item.timestamp)}
                 </Text>
               </View>
             </View>
-            <TouchableOpacity onPress={dismissExposedAlert} style={styles.closeAlertBtn}>
-              <Text style={{ color: colors.textPrimary, fontSize: 16 }}>✕</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
+          ) : !isRunner && status === 'running' ? (
+            <View style={styles.nearestCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.nearestTitle}>NO PINGS YET</Text>
+                <Text style={styles.nearestBody}>
+                  Runners stay hidden until the next reveal{revealRemainingSec !== null ? ` in ${mmss(revealRemainingSec)}` : ''}.
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {isRunner && exposedAlert && (
+            <Animated.View style={[styles.exposedBanner, { opacity: threatPulseAnim }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ fontSize: 16 }}>⚠️</Text>
+                <Text style={[styles.headlineSm, { color: colors.textPrimary, fontSize: 14 }]}>YOU WERE REVEALED</Text>
+                <View style={styles.criticalPill}>
+                  <Text style={[styles.labelMonoSm, { color: colors.signalDanger, fontWeight: 'bold' }]}>MOVE</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={dismissExposedAlert} style={styles.closeAlertBtn}>
+                <Text style={{ color: colors.textPrimary, fontSize: 16 }}>✕</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+        </View>
       </View>
+
+      {/* Fit-the-whole-zone button */}
+      <TouchableOpacity
+        style={[styles.recenterBtn, { position: 'absolute', right: 16, bottom: insets.bottom + 150 }]}
+        onPress={() => mapRef.current?.fitZone()}
+      >
+        <Text style={{ fontSize: 16, color: colors.textPrimary }}>🗺</Text>
+      </TouchableOpacity>
 
       {/* ——— Lower Action Zone ——— */}
       <View style={[styles.bottomActionZone, { paddingBottom: insets.bottom + 8 }]}>
-        {/* Recenter & Utilities */}
         <View style={styles.actionRow}>
-          {/* SOS 3-Second Hold Button */}
           <TouchableOpacity
             style={[styles.sosButton, sosProgress > 0 && styles.sosActive]}
             activeOpacity={0.8}
@@ -390,49 +280,45 @@ export default function LiveMapScreen() {
             <Text style={[styles.headlineSm, { color: colors.textPrimary, fontSize: 16 }]}>
               {sosProgress > 0 ? `${sosProgress}%` : 'SOS'}
             </Text>
-            <Text style={[styles.labelMonoSm, { color: colors.textSecondary, fontSize: 9 }]}>
-              HOLD 3S
-            </Text>
+            <Text style={[styles.labelMonoSm, { color: colors.textSecondary, fontSize: 9 }]}>HOLD 3S</Text>
           </TouchableOpacity>
 
-          {/* Center Space: Zone Edge Chip (Runner) or Recenter */}
-          {isRunner ? (
-            <View style={styles.zoneEdgeChip}>
-              <Text style={{ fontSize: 14 }}>🛡</Text>
-              <View>
-                <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>ZONE EDGE</Text>
-                <Text style={[styles.labelMonoSm, { color: colors.accentPrimary, fontWeight: 'bold' }]}>
-                  320M INSIDE
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.recenterBtn} onPress={() => {}}>
-              <Text style={{ fontSize: 18, color: colors.textPrimary }}>🎯</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Chaser GIANT TAG BUTTON */}
-          {!isRunner ? (
-            <TouchableOpacity
-              style={styles.giantTagBtn}
-              activeOpacity={0.85}
-              onPress={handleTagAction}
-            >
-              <Text style={{ fontSize: 22 }}>⚡</Text>
-              <Text style={[styles.headlineSm, { color: colors.textPrimary, letterSpacing: 1.5 }]}>
-                TAG
+          {/* Distance to the zone edge, always real */}
+          <View style={styles.zoneEdgeChip}>
+            <Text style={{ fontSize: 14 }}>🛡</Text>
+            <View>
+              <Text style={[styles.labelMonoSm, { color: colors.textSecondary }]}>ZONE EDGE</Text>
+              <Text
+                style={[
+                  styles.labelMonoSm,
+                  { color: insideM !== null && insideM < 0 ? colors.signalDanger : colors.accentPrimary, fontWeight: 'bold' },
+                ]}
+              >
+                {insideM === null ? 'LOCATING…' : insideM >= 0 ? `${formatDistance(insideM)} INSIDE` : `${formatDistance(-insideM)} OUTSIDE`}
               </Text>
+            </View>
+          </View>
+
+          {!isRunner ? (
+            <TouchableOpacity style={styles.giantTagBtn} activeOpacity={0.85} onPress={handleTagAction}>
+              <Text style={{ fontSize: 22 }}>⚡</Text>
+              <Text style={[styles.headlineSm, { color: colors.textPrimary, letterSpacing: 1.5 }]}>TAG</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.recenterBtn} onPress={() => {}}>
+            <TouchableOpacity style={styles.recenterBtn} onPress={() => mapRef.current?.recenter()}>
               <Text style={{ fontSize: 18, color: colors.textPrimary }}>📍</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Drawer Handle (Tap to inspect squad roster / intel) */}
-        <TouchableOpacity style={styles.drawerHandleBar} onPress={toggleSheet}>
+        {!isRunner && (
+          <TouchableOpacity style={[styles.recenterBtn, { alignSelf: 'flex-end', marginTop: 8 }]} onPress={() => mapRef.current?.recenter()}>
+            <Text style={{ fontSize: 18, color: colors.textPrimary }}>🎯</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Squad / intel drawer */}
+        <TouchableOpacity style={styles.drawerHandleBar} onPress={() => setBottomSheetOpen((v) => !v)}>
           <View style={styles.drawerHandleGrip} />
           <View style={styles.drawerSummaryRow}>
             <Text style={[styles.labelMonoSm, { color: colors.textPrimary, fontWeight: 'bold' }]}>
@@ -440,11 +326,34 @@ export default function LiveMapScreen() {
             </Text>
             <View style={styles.aliveBadge}>
               <Text style={[styles.labelMonoSm, { color: roleColor, fontWeight: 'bold' }]}>
-                {activeRunners.length} / {totalRunners.length || 1} ALIVE
+                {activeRunners.length} / {totalRunners.length} ALIVE
               </Text>
             </View>
           </View>
         </TouchableOpacity>
+
+        {bottomSheetOpen && (
+          <View style={styles.rosterPanel}>
+            <Text style={styles.rosterHeading}>RUNNERS</Text>
+            {totalRunners.map((p) => (
+              <View key={p.userId} style={styles.rosterRow}>
+                <Text style={styles.rosterName}>@{p.username}</Text>
+                <Text style={[styles.rosterState, p.status !== 'ACTIVE' && { color: colors.signalDanger }]}>{playerStatus(p)}</Text>
+              </View>
+            ))}
+            <Text style={[styles.rosterHeading, { marginTop: 8 }]}>CHASERS</Text>
+            {chasers.map((p) => (
+              <View key={p.userId} style={styles.rosterRow}>
+                <Text style={styles.rosterName}>@{p.username}</Text>
+                <Text style={[styles.rosterState, p.status !== 'ACTIVE' && { color: colors.signalDanger }]}>{playerStatus(p)}</Text>
+              </View>
+            ))}
+            <Text style={styles.rosterMeta}>
+              GPS {myAccuracy !== null ? `±${Math.round(myAccuracy)} m` : 'waiting'} ·{' '}
+              {trackingMode === 'background' ? 'tracks with screen locked' : trackingMode === 'foreground' ? 'app must stay open' : 'tracking off'}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -799,4 +708,26 @@ const styles = StyleSheet.create({
   headlineSm: {
     ...typography.headlineSm,
   },
+
+  alertStack: { marginTop: 8, gap: 8 },
+  nearestCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderWidth: 1,
+    borderRadius: radii.card,
+    padding: 12,
+  },
+  nearestArrowBox: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accentPrimary, alignItems: 'center', justifyContent: 'center' },
+  nearestArrow: { color: colors.textInverse, fontSize: 18, fontWeight: '900' },
+  nearestTitle: { ...typography.labelMonoSm, color: colors.textSecondary, fontWeight: '700' },
+  nearestBody: { ...typography.bodyMd, color: colors.textPrimary, fontSize: 13, marginTop: 2 },
+  rosterPanel: { backgroundColor: colors.surface, borderRadius: radii.card, padding: 12, marginTop: 8 },
+  rosterHeading: { ...typography.labelMonoSm, color: colors.accentPrimary, fontWeight: '800', marginBottom: 4 },
+  rosterRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
+  rosterName: { ...typography.bodyMd, color: colors.textPrimary, fontSize: 13 },
+  rosterState: { ...typography.labelMonoSm, color: colors.textSecondary, fontWeight: '700' },
+  rosterMeta: { ...typography.labelMonoSm, color: colors.textSecondary, fontSize: 10, marginTop: 10 },
 });

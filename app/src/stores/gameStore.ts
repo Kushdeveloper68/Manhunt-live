@@ -10,7 +10,7 @@ export interface CreateGameDraft {
 }
 
 const DEFAULT_DRAFT: CreateGameDraft = {
-  name: 'CENTRAL PARK PURSUIT',
+  name: 'MY MANHUNT',
   mode: 'Classic Manhunt',
   maxPlayers: 16,
   settings: {
@@ -18,17 +18,7 @@ const DEFAULT_DRAFT: CreateGameDraft = {
       center: { latitude: 40.78509, longitude: -73.96828 },
       radius: 1500, // 1.5 km
     },
-    noGoZones: [
-      {
-        id: 'metro-transit',
-        name: 'METRO TRANSIT',
-        polygon: [
-          { latitude: 40.79, longitude: -73.97 },
-          { latitude: 40.792, longitude: -73.965 },
-          { latitude: 40.788, longitude: -73.96 },
-        ],
-      },
-    ],
+    noGoZones: [],
     durationMin: 60,
     headStartMin: 3,
     revealIntervalMin: 2,

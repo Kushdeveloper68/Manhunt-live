@@ -64,6 +64,15 @@ JS changes now reload instantly.
    Also hold your own SOS button for 3 s: the SOS screen must show REAL coordinates and honest status.
 9. Out-of-zone: walk outside the circle: you should get the warning (and the penalty the host chose).
 
+## 5b. Real map checks (needs a NEW native build: `eas build --profile development --platform android`)
+- Create Game step 2 shows a real street map centred on YOU. Tap the map to move the zone, use +/- for radius, "DRAW NO-GO ZONE" then tap 3+ points and FINISH.
+- In the match: your dot (with heading), teammates as live dots, zone circle with the OUTSIDE dimmed, no-go areas in red.
+- Chaser: runner pings appear ONLY at reveal ticks, ring fades with age, label says "@name · 42s ago". HUD arrow points to the nearest ping.
+- Runner: "YOU WERE REVEALED" at each reveal (no positions are sent to you).
+- Walk out of the circle: red border, "GET BACK IN THE ZONE", distance, arrow and the penalty countdown.
+- ~60 s before a shrink: amber banner + dashed ring showing the new boundary.
+- If the map is blank: check internet on the phone; the tiles come from OpenFreeMap (set EXPO_PUBLIC_MAP_STYLE_URL to use another provider).
+
 ## 6. Background GPS test (most important)
 1. Lobby: make a bot your TEAMMATE (bots and you both Runner) and start the match.
 2. Lock the phone screen, walk outside for 2-3 minutes.

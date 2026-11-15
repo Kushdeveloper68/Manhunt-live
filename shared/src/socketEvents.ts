@@ -27,6 +27,7 @@ export const SOCKET_EVENTS = {
   REVEAL_TICK: 'reveal:tick',
   ZONE_UPDATE: 'zone:update',
   ZONE_SHRINKING: 'zone:shrinking',
+  ZONE_SHRINK_WARNING: 'zone:shrink_warning',
   ZONE_VIOLATION: 'zone:violation',
   PLAYER_TAGGED: 'player:tagged',
   PLAYER_ELIMINATED: 'player:eliminated',

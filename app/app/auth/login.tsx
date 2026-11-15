@@ -88,7 +88,7 @@ export default function LoginScreen() {
         <View style={styles.topSection}>
           <View style={styles.statusChip}>
             <View style={styles.pulsingDot} />
-            <Text style={styles.statusChipText}>GRID ONLINE • METRO NYC</Text>
+            <Text style={styles.statusChipText}>GRID ONLINE</Text>
           </View>
 
           {/* Crosshair Graphic */}

@@ -330,6 +330,29 @@ export function registerLobbyHandlers(io: Server, socket: AuthenticatedSocket) {
   socket.on(SOCKET_EVENTS.PLAYER_KICK, async (payload: unknown) => {
     try {
       const { gameId, targetUserId } = kickSchema.parse(payload);
+
+      // Removing someone from a match that is already running
+      const live = await gameStateStore.get(gameId);
+      if (live && live.status !== 'ended') {
+        if (live.hostId !== user.userId) {
+          return socket.emit(SOCKET_EVENTS.ERROR, { message: 'Only the host can remove players' });
+        }
+        if (targetUserId === user.userId) {
+          return socket.emit(SOCKET_EVENTS.ERROR, { message: 'Host cannot remove themselves' });
+        }
+        if (!live.players.some((p) => p.userId === targetUserId && p.status === 'ACTIVE')) {
+          return socket.emit(SOCKET_EVENTS.ERROR, { message: 'That player is not active in this match' });
+        }
+        await gameLoopManager.eliminatePlayer(live, targetUserId, 'KICKED_BY_HOST');
+        const room = `game:${gameId}`;
+        io.to(userRoom(targetUserId)).emit(SOCKET_EVENTS.PLAYER_KICKED, {
+          gameId,
+          reason: 'The host removed you from the match',
+        });
+        io.in(userRoom(targetUserId)).socketsLeave(room);
+        return;
+      }
+
       const game = await Game.findById(gameId);
       if (!game) return;
 

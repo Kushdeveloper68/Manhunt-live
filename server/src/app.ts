@@ -4,6 +4,7 @@ import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
 import { gamesRouter } from './routes/games.js';
 import { friendsRouter } from './routes/friends.js';
+import { reportsRouter } from './routes/reports.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { config } from './config.js';
 
@@ -20,6 +21,7 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.use('/api/games', gamesRouter);
   app.use('/api/friends', friendsRouter);
+  app.use('/api/reports', reportsRouter);
 
   // 404 handler
   app.use('*', (_req, res) => {

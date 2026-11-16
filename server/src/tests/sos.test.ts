@@ -55,7 +55,7 @@ const got = (s: ReturnType<typeof mk>, ev: string) => s.emitted.filter(([e]) => 
 
 async function setup(id: string) {
   const st = state(id);
-  st.locations.set('r1', { userId: 'r1', username: 'runner1', role: 'RUNNER', coordinates: { latitude: 40.001, longitude: -73.001 }, timestamp: Date.now(), receivedAt: Date.now() });
+  st.locations.set('r1', { userId: 'r1', username: 'runner1', role: 'RUNNER', coordinates: { latitude: 40.001, longitude: -73.001 }, timestamp: Date.now() - 60_000, receivedAt: Date.now() - 60_000 });
   await gameStateStore.set(id, st);
   const host = mk('host');
   const chaser = mk('c2');

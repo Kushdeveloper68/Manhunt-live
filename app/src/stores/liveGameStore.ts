@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Vibration } from 'react-native';
+import { Alert, Vibration } from 'react-native';
 import { useStatusStore } from './statusStore';
 import {
   GameStateSync,
@@ -248,7 +248,12 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
           pendingTagAttempt: isMe ? null : get().pendingTagAttempt,
           eliminatedData: isMe
             ? {
-                taggedBy: data.cause === 'ZONE_BREACH' ? 'ZONE BREACH' : data.cause === 'LEFT_GAME' ? 'LEFT GAME' : 'CHASER',
+                taggedBy:
+                  data.cause === 'ZONE_BREACH' ? 'ZONE BREACH'
+                  : data.cause === 'LEFT_GAME' ? 'LEFT GAME'
+                  : data.cause === 'CHEATING' ? 'FAIR PLAY'
+                  : data.cause === 'KICKED_BY_HOST' ? 'HOST'
+                  : 'CHASER',
                 taggedAt: data.eliminatedAt || Date.now(),
               }
             : get().eliminatedData,
@@ -282,6 +287,26 @@ export const useLiveGameStore = create<LiveGameStateProps>((set, get) => ({
           status: 'ended',
           matchEnd: { winnerRole: data.winningRole, reason: data.reason, summary: data.summary },
         });
+      });
+
+      // Fair play: warnings to the player, alerts to the host
+      socket.off(SOCKET_EVENTS.FAIR_PLAY_WARNING);
+      socket.on(SOCKET_EVENTS.FAIR_PLAY_WARNING, (d: { message: string }) => {
+        Vibration.vibrate([0, 400, 200, 400]);
+        Alert.alert('FAIR PLAY WARNING', d?.message || 'Suspicious GPS detected.');
+      });
+      socket.off(SOCKET_EVENTS.FAIR_PLAY_ALERT);
+      socket.on(SOCKET_EVENTS.FAIR_PLAY_ALERT, (d: { username: string; kind: string }) => {
+        Alert.alert(
+          'PLAYER REMOVED',
+          `@${d.username} was removed for ${d.kind === 'MOCK_GPS' ? 'using fake GPS' : 'impossible movement (teleporting or a vehicle)'}.`
+        );
+      });
+
+      // Removed from a running match by the host
+      socket.off(SOCKET_EVENTS.PLAYER_KICKED);
+      socket.on(SOCKET_EVENTS.PLAYER_KICKED, (d: { reason?: string }) => {
+        useStatusStore.getState().setNotice('KICKED', d?.reason || 'The host removed you from the match.');
       });
 
       // Host cancelled the match

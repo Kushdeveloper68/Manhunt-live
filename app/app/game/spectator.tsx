@@ -137,7 +137,11 @@ export default function SpectatorScreen() {
       ? 'REMOVED FOR LEAVING THE ZONE'
       : outCause === 'LEFT GAME'
         ? 'YOU LEFT THE MATCH'
-        : outCause
+        : outCause === 'FAIR PLAY'
+          ? 'REMOVED FOR FAIR-PLAY VIOLATIONS'
+          : outCause === 'HOST'
+            ? 'REMOVED BY THE HOST'
+            : outCause
           ? `TAGGED${outTime ? ` AT ${outTime}` : ''} BY @${outCause.toUpperCase()}`
           : 'YOU ARE OUT OF THE MATCH';
 

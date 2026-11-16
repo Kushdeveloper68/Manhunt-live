@@ -13,6 +13,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/stores/authStore';
+import { api } from '../../src/services/api';
+import { getSocket, isSocketConnected } from '../../src/services/socket';
+import { SOCKET_EVENTS } from '@manhunt/shared';
 import { useLiveGameStore, serverNow } from '../../src/stores/liveGameStore';
 import { useTrackingStore } from '../../src/stores/trackingStore';
 import { compassPoint, formatAge, formatDistance, metersInsideZone, nearestOf } from '@manhunt/shared';
@@ -56,6 +59,34 @@ export default function LiveMapScreen() {
     eliminatedData,
   } = useLiveGameStore();
   const trackingMode = useTrackingStore((s) => s.mode);
+  const myId = useAuthStore((s) => s.user?.id);
+  const liveGameId = useLiveGameStore((s) => s.gameId);
+  const iAmHost = players.some((p) => p.userId === myId && p.isHost);
+
+  const removePlayer = (p: (typeof players)[number]) =>
+    Alert.alert('Remove player?', `@${p.username} will be removed from the match.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          if (liveGameId && isSocketConnected()) getSocket().emit(SOCKET_EVENTS.PLAYER_KICK, { gameId: liveGameId, targetUserId: p.userId });
+        },
+      },
+    ]);
+
+  const reportPlayer = (p: (typeof players)[number]) => {
+    const send = (reason: 'CHEATING' | 'UNSAFE_BEHAVIOUR') =>
+      api
+        .reportPlayer({ reportedUserId: p.userId, gameId: liveGameId ?? undefined, reason })
+        .then(() => Alert.alert('Report sent', 'Thanks. Our moderators will review it.'))
+        .catch((e) => Alert.alert('Could not send report', e instanceof Error ? e.message : 'Try again later'));
+    Alert.alert(`Report @${p.username}`, 'What is the problem?', [
+      { text: 'Cheating', onPress: () => send('CHEATING') },
+      { text: 'Unsafe / abusive', onPress: () => send('UNSAFE_BEHAVIOUR') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [sosProgress, setSosProgress] = useState(0);
@@ -167,7 +198,7 @@ export default function LiveMapScreen() {
   const arrowRot = target ? (target.bearing - (mySpeed > 0.8 ? myHeading : 0) + 360) % 360 : 0;
 
   const playerStatus = (p: (typeof players)[number]) =>
-    p.status === 'ACTIVE' ? (p.role === 'RUNNER' ? 'FREE' : 'ACTIVE') : p.taggedBy === 'ZONE BREACH' || p.taggedBy === 'LEFT GAME' ? 'OUT' : 'TAGGED';
+    p.status === 'ACTIVE' ? (p.role === 'RUNNER' ? 'FREE' : 'ACTIVE') : ['ZONE BREACH', 'LEFT GAME', 'FAIR PLAY', 'HOST'].includes(p.taggedBy ?? '') ? 'OUT' : 'TAGGED';
 
   return (
     <View style={styles.container}>
@@ -338,14 +369,38 @@ export default function LiveMapScreen() {
             {totalRunners.map((p) => (
               <View key={p.userId} style={styles.rosterRow}>
                 <Text style={styles.rosterName}>@{p.username}</Text>
-                <Text style={[styles.rosterState, p.status !== 'ACTIVE' && { color: colors.signalDanger }]}>{playerStatus(p)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={[styles.rosterState, p.status !== 'ACTIVE' && { color: colors.signalDanger }]}>{playerStatus(p)}</Text>
+                  {p.userId !== myId && (
+                    <TouchableOpacity onPress={() => reportPlayer(p)} hitSlop={8}>
+                      <Text style={styles.rosterAction}>⚑</Text>
+                    </TouchableOpacity>
+                  )}
+                  {iAmHost && p.userId !== myId && p.status === 'ACTIVE' && (
+                    <TouchableOpacity onPress={() => removePlayer(p)} hitSlop={8}>
+                      <Text style={[styles.rosterAction, { color: colors.signalDanger }]}>✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             ))}
             <Text style={[styles.rosterHeading, { marginTop: 8 }]}>CHASERS</Text>
             {chasers.map((p) => (
               <View key={p.userId} style={styles.rosterRow}>
                 <Text style={styles.rosterName}>@{p.username}</Text>
-                <Text style={[styles.rosterState, p.status !== 'ACTIVE' && { color: colors.signalDanger }]}>{playerStatus(p)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={[styles.rosterState, p.status !== 'ACTIVE' && { color: colors.signalDanger }]}>{playerStatus(p)}</Text>
+                  {p.userId !== myId && (
+                    <TouchableOpacity onPress={() => reportPlayer(p)} hitSlop={8}>
+                      <Text style={styles.rosterAction}>⚑</Text>
+                    </TouchableOpacity>
+                  )}
+                  {iAmHost && p.userId !== myId && p.status === 'ACTIVE' && (
+                    <TouchableOpacity onPress={() => removePlayer(p)} hitSlop={8}>
+                      <Text style={[styles.rosterAction, { color: colors.signalDanger }]}>✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             ))}
             <Text style={styles.rosterMeta}>
@@ -730,4 +785,5 @@ const styles = StyleSheet.create({
   rosterName: { ...typography.bodyMd, color: colors.textPrimary, fontSize: 13 },
   rosterState: { ...typography.labelMonoSm, color: colors.textSecondary, fontWeight: '700' },
   rosterMeta: { ...typography.labelMonoSm, color: colors.textSecondary, fontSize: 10, marginTop: 10 },
+  rosterAction: { color: colors.textSecondary, fontSize: 16, fontWeight: '700' },
 });

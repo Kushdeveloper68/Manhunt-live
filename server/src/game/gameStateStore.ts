@@ -35,6 +35,7 @@ export interface LiveGameState {
   revealWarnedFor?: number; // nextRevealAt value a push warning was sent for
   summary?: MatchSummary;
   activeSos?: Set<string>; // players with an SOS currently active
+  fairPlay?: Map<string, { mock: number; jumps: number }>; // cheating strikes per player
   offlineSince?: Map<string, number>; // userId -> when their last socket disconnected
   winnerRole?: 'CHASER' | 'RUNNER';
   endReason?: string;

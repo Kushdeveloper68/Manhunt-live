@@ -73,6 +73,11 @@ JS changes now reload instantly.
 - ~60 s before a shrink: amber banner + dashed ring showing the new boundary.
 - If the map is blank: check internet on the phone; the tiles come from OpenFreeMap (set EXPO_PUBLIC_MAP_STYLE_URL to use another provider).
 
+## 5c. Fair-play checks
+- Fake GPS: on a SECOND phone enable Developer options > "Select mock location app" and use any fake-GPS app. In a match you get 2 warnings, on the 3rd strike you are removed ("REMOVED FOR FAIR-PLAY VIOLATIONS") and the host sees a "PLAYER REMOVED" alert.
+- Vehicle/teleport: riding a bike or car (over ~54 km/h) or a GPS jump gets the same warning and removal after a sustained run.
+- Host: open the squad drawer on the map; the host sees a red ✕ next to every active player (confirm = removed, they see a "removed by host" screen). Everyone sees a ⚑ to report a player.
+
 ## 6. Background GPS test (most important)
 1. Lobby: make a bot your TEAMMATE (bots and you both Runner) and start the match.
 2. Lock the phone screen, walk outside for 2-3 minutes.

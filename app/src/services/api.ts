@@ -143,6 +143,10 @@ class ApiService {
     await this.request(`/friends/invites/${encodeURIComponent(inviteId)}/decline`, { method: 'POST' });
   }
 
+  async reportPlayer(data: { reportedUserId: string; gameId?: string; reason: 'CHEATING' | 'HARASSMENT' | 'UNSAFE_BEHAVIOUR' | 'OTHER'; details?: string }): Promise<void> {
+    await this.request('/reports', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // ───────── Account ─────────
   async putPushToken(token: string): Promise<void> {
     await this.request('/auth/push-token', { method: 'PUT', body: JSON.stringify({ token }) });

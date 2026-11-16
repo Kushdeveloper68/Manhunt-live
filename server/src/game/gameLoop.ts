@@ -415,14 +415,19 @@ class GameLoopManager {
    * Removes a player from the match (zone breach or leaving mid-game).
    * Win conditions are re-evaluated on the next tick.
    */
-  async eliminatePlayer(state: LiveGameState, userId: string, cause: 'ZONE_BREACH' | 'LEFT_GAME') {
+  async eliminatePlayer(
+    state: LiveGameState,
+    userId: string,
+    cause: 'ZONE_BREACH' | 'LEFT_GAME' | 'CHEATING' | 'KICKED_BY_HOST'
+  ) {
     const player = state.players.find((p) => p.userId === userId);
     if (!player || player.status !== 'ACTIVE') return;
 
     const now = Date.now();
     player.status = 'ELIMINATED';
     player.taggedAt = now;
-    player.taggedBy = cause === 'ZONE_BREACH' ? 'ZONE BREACH' : 'LEFT GAME';
+    player.taggedBy =
+      cause === 'ZONE_BREACH' ? 'ZONE BREACH' : cause === 'CHEATING' ? 'FAIR PLAY' : cause === 'KICKED_BY_HOST' ? 'HOST' : 'LEFT GAME';
     state.breachStartedAt?.delete(userId);
     state.activeSos?.delete(userId);
     await gameStateStore.set(state.gameId, state);
@@ -434,7 +439,14 @@ class GameLoopManager {
       ).catch((err) => logger.error('Failed to persist elimination:', err));
       await GameEvent.create({
         gameId: state.gameId,
-        type: cause === 'ZONE_BREACH' ? 'ZONE_ELIMINATION' : 'PLAYER_LEFT',
+        type:
+          cause === 'ZONE_BREACH'
+            ? 'ZONE_ELIMINATION'
+            : cause === 'CHEATING'
+              ? 'FAIR_PLAY_REMOVAL'
+              : cause === 'KICKED_BY_HOST'
+                ? 'HOST_REMOVAL'
+                : 'PLAYER_LEFT',
         ts: new Date(now),
         payload: { userId, username: player.username, role: player.role },
       }).catch(() => {});

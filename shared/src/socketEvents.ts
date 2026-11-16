@@ -35,6 +35,8 @@ export const SOCKET_EVENTS = {
   FRIEND_REQUEST: 'friend:request',
   FRIEND_UPDATE: 'friend:update',
   GAME_INVITE: 'game:invite',
+  FAIR_PLAY_WARNING: 'fairplay:warning',
+  FAIR_PLAY_ALERT: 'fairplay:alert',
   ERROR: 'error',
 } as const;
 

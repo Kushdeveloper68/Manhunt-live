@@ -85,6 +85,7 @@ JS changes now reload instantly.
 4. The phone should show the notification "MANHUNT LIVE: match active" while the match runs, and it must disappear after the match.
 
 ## Troubleshooting
+- Map problems: the map needs the NEWEST native build (MapLibre was added, and the New Architecture is now switched OFF because MapLibre v10 does not support it properly). Rebuild with `eas build --profile development --platform android` and reinstall the APK. On an old APK the map area shows "MAP UNAVAILABLE" instead of crashing. If you see "MAP TILES OFFLINE", the tile server or your internet is down: zone, pins and alerts still work. Look for lines starting with `[map]` in the Metro terminal and send them to me.
 - `Unable to resolve "query-string"` / `./socketEvents.js` while bundling: pull the latest files, run `npm install` and `npm run build:shared`, then restart with `npx expo start --dev-client --clear`. After EVERY pull that touches `shared/`, run `npm run build:shared` again.
 - Phone can't reach the server: same WiFi? AP/client isolation (college WiFi) blocks it. Use your phone hotspot for the PC, or run `npx expo start --dev-client --tunnel`
   and expose the server with a tunnel (cloudflared / ngrok) and use its https URL in app/.env.

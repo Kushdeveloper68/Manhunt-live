@@ -1,16 +1,12 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
-import {
-  MapView,
-  Camera,
-  ShapeSource,
-  FillLayer,
-  LineLayer,
-  MarkerView,
-  type CameraRef,
-} from '@maplibre/maplibre-react-native';
+import type { CameraRef } from '@maplibre/maplibre-react-native';
 import { zoneBounds, LatLng, NoGoZone } from '@manhunt/shared';
-import { MAP_STYLE_URL, MAP_COLORS } from './mapConfig';
+import { MAP_COLORS } from './mapConfig';
+import { getMapLibre } from './maplibre';
+import { useMapStyle } from './useMapStyle';
+import { MapFallback } from './MapFallback';
+import { MapErrorBoundary } from './MapErrorBoundary';
 import { zoneFill, zoneLine, polygonsOf, lineThrough } from './geojson';
 
 interface Props {
@@ -26,8 +22,9 @@ interface Props {
 }
 
 /** The host's zone editor on a real map: tap to place the zone, tap points to outline no-go areas. */
-export function ZonePickerMap({ center, radius, onCenterChange, noGoZones, drawingPoints, onAddPoint }: Props) {
+function ZonePickerMapInner({ center, radius, onCenterChange, noGoZones, drawingPoints, onAddPoint }: Props) {
   const cameraRef = useRef<CameraRef>(null);
+  const mapStyle = useMapStyle();
 
   // Keep the whole zone in view whenever it moves or resizes
   useEffect(() => {
@@ -42,11 +39,17 @@ export function ZonePickerMap({ center, radius, onCenterChange, noGoZones, drawi
   const noGo = useMemo(() => polygonsOf(noGoZones), [noGoZones]);
   const drawing = drawingPoints && drawingPoints.length >= 2 ? lineThrough(drawingPoints) : null;
 
+  const ML = getMapLibre();
+  if (!ML) return <MapFallback />;
+  const { MapView, Camera, ShapeSource, FillLayer, LineLayer, MarkerView } = ML;
+
   return (
     <View style={StyleSheet.absoluteFill}>
       <MapView
         style={StyleSheet.absoluteFill}
-        mapStyle={MAP_STYLE_URL}
+        mapStyle={mapStyle.style}
+        onDidFinishLoadingMap={mapStyle.onLoaded}
+        onDidFailLoadingMap={mapStyle.onFail}
         logoEnabled={false}
         compassEnabled={false}
         rotateEnabled={false}
@@ -96,6 +99,15 @@ export function ZonePickerMap({ center, radius, onCenterChange, noGoZones, drawi
         </MarkerView>
       </MapView>
     </View>
+  );
+}
+
+/** The zone editor, wrapped so a map failure never takes the create-game screen down. */
+export function ZonePickerMap(props: Props) {
+  return (
+    <MapErrorBoundary>
+      <ZonePickerMapInner {...props} />
+    </MapErrorBoundary>
   );
 }
 

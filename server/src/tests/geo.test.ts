@@ -136,3 +136,21 @@ test('server sends ONE in-app shrink warning per stage, with the next zone previ
   assert.equal(warns[0][1].nextZone.radius, 750);
   assert.ok(warns[0][1].secondsLeft > 40 && warns[0][1].secondsLeft <= 45);
 });
+
+import { ringArea, orientRing, zonePolygon } from '@manhunt/shared';
+
+test('winding: exterior counter-clockwise, hole clockwise (a wrong hole dims the WHOLE map)', () => {
+  const ring = circleRing(A, 500, 32);
+  const poly = worldWithHole(ring);
+  assert.ok(ringArea(poly[0]) > 0, 'world ring must be counter-clockwise');
+  assert.ok(ringArea(poly[1]) < 0, 'hole must be clockwise');
+  assert.ok(ringArea(zonePolygon(ring)[0]) > 0, 'zone fill must be counter-clockwise');
+});
+
+test('orientRing flips only when needed and keeps the same points', () => {
+  const ccw = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]];
+  assert.deepEqual(orientRing(ccw, true), ccw);
+  const cw = orientRing(ccw, false);
+  assert.ok(ringArea(cw) < 0);
+  assert.equal(cw.length, ccw.length);
+});

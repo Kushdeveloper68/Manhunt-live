@@ -1,5 +1,5 @@
 import type { Feature, FeatureCollection, Polygon, LineString } from 'geojson';
-import { circleRing, worldWithHole, LatLng } from '@manhunt/shared';
+import { circleRing, worldWithHole, zonePolygon, LatLng } from '@manhunt/shared';
 
 type Zone = { center: LatLng; radius: number };
 
@@ -15,7 +15,7 @@ export const dimOutside = (zone: Zone): Feature<Polygon> => ({
 export const zoneFill = (zone: Zone): Feature<Polygon> => ({
   type: 'Feature',
   properties: {},
-  geometry: { type: 'Polygon', coordinates: [ringOf(zone)] },
+  geometry: { type: 'Polygon', coordinates: zonePolygon(ringOf(zone)) },
 });
 
 export const zoneLine = (zone: Zone): Feature<LineString> => ({

@@ -59,7 +59,26 @@ export function circleRing(center: LatLng, radiusMeters: number, steps = 64): nu
   return ring;
 }
 
-/** A polygon covering (almost) the whole world with a hole: used to dim everything OUTSIDE the zone. */
+/** Signed area of a [lon, lat] ring (shoelace). Positive = counter-clockwise. */
+export function ringArea(ring: number[][]): number {
+  let sum = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    sum += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+  }
+  return sum / 2;
+}
+
+/** Returns the ring wound the requested way (GeoJSON: exterior counter-clockwise, holes clockwise). */
+export function orientRing(ring: number[][], counterClockwise: boolean): number[][] {
+  const isCcw = ringArea(ring) > 0;
+  return isCcw === counterClockwise ? ring : [...ring].reverse();
+}
+
+/**
+ * A polygon covering the whole map with the zone cut out: used to dim everything OUTSIDE the zone.
+ * Winding follows RFC 7946 (renderers classify exterior vs hole by winding, and a wrong hole
+ * winding fills the zone too, which dims the entire map).
+ */
 export function worldWithHole(hole: number[][]): number[][][] {
   const world = [
     [-180, -85],
@@ -68,7 +87,12 @@ export function worldWithHole(hole: number[][]): number[][][] {
     [-180, 85],
     [-180, -85],
   ];
-  return [world, [...hole].reverse()]; // the hole must wind the opposite way
+  return [orientRing(world, true), orientRing(hole, false)];
+}
+
+/** A filled polygon for a zone circle (exterior, counter-clockwise). */
+export function zonePolygon(ring: number[][]): number[][][] {
+  return [orientRing(ring, true)];
 }
 
 /** Positive = metres inside the zone edge, negative = metres outside. */

@@ -1,19 +1,16 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import {
-  MapView,
-  Camera,
-  ShapeSource,
-  FillLayer,
-  LineLayer,
-  MarkerView,
-  type CameraRef,
-} from '@maplibre/maplibre-react-native';
+import type { CameraRef } from '@maplibre/maplibre-react-native';
 import { zoneBounds } from '@manhunt/shared';
 import { useAuthStore } from '../../stores/authStore';
 import { useLiveGameStore, serverNow } from '../../stores/liveGameStore';
 import { formatAge } from '@manhunt/shared';
-import { MAP_STYLE_URL, MAP_COLORS, roleColor } from './mapConfig';
+import { MAP_COLORS, roleColor } from './mapConfig';
+import { getMapLibre } from './maplibre';
+import { useMapStyle } from './useMapStyle';
+import { MapFallback } from './MapFallback';
+import { MapErrorBoundary } from './MapErrorBoundary';
+import { Text } from 'react-native';
 import { dimOutside, zoneLine, polygonsOf } from './geojson';
 import { SelfPin, PlayerPin, PingPin, SosPin, FellPin } from './Pins';
 
@@ -37,7 +34,7 @@ interface Props {
  * The live game map: real streets, the zone (and a preview of the next one), no-go zones,
  * you, your teammates, and revealed pings that fade as they get old.
  */
-export const GameMap = forwardRef<GameMapHandle, Props>(function GameMap({ spectator = false, bottomInset = 150, focus = null }, ref) {
+const GameMapInner = forwardRef<GameMapHandle, Props>(function GameMapInner({ spectator = false, bottomInset = 150, focus = null }, ref) {
   const cameraRef = useRef<CameraRef>(null);
   const myId = useAuthStore((s) => s.user?.id);
 
@@ -53,6 +50,7 @@ export const GameMap = forwardRef<GameMapHandle, Props>(function GameMap({ spect
   const revealIntervalMin = useLiveGameStore((s) => s.revealIntervalMin);
   const incomingSos = useLiveGameStore((s) => s.incomingSos);
 
+  const mapStyle = useMapStyle();
   const [following, setFollowing] = useState(!spectator);
   const [, setTick] = useState(0);
 
@@ -135,11 +133,17 @@ export const GameMap = forwardRef<GameMapHandle, Props>(function GameMap({ spect
   const isRunner = myRole === 'RUNNER';
   const others = teammates.filter((l) => l.userId !== myId);
 
+  const ML = getMapLibre();
+  if (!ML) return <MapFallback />;
+  const { MapView, Camera, ShapeSource, FillLayer, LineLayer, MarkerView } = ML;
+
   return (
     <View style={styles.fill}>
       <MapView
         style={StyleSheet.absoluteFill}
-        mapStyle={MAP_STYLE_URL}
+        mapStyle={mapStyle.style}
+        onDidFinishLoadingMap={mapStyle.onLoaded}
+        onDidFailLoadingMap={mapStyle.onFail}
         logoEnabled={false}
         compassEnabled={false}
         rotateEnabled={false}
@@ -222,10 +226,35 @@ export const GameMap = forwardRef<GameMapHandle, Props>(function GameMap({ spect
           </MarkerView>
         )}
       </MapView>
+      {mapStyle.offline && (
+        <View pointerEvents="none" style={[styles.offlineChip, { bottom: bottomInset + 44 }]}>
+          <Text style={styles.offlineText}>MAP TILES OFFLINE · zone and players are still live</Text>
+        </View>
+      )}
     </View>
+  );
+});
+
+/** The live game map, wrapped so a map failure never takes the whole screen down. */
+export const GameMap = forwardRef<GameMapHandle, Props>(function GameMap(props, ref) {
+  return (
+    <MapErrorBoundary>
+      <GameMapInner ref={ref} {...props} />
+    </MapErrorBoundary>
   );
 });
 
 const styles = StyleSheet.create({
   fill: { ...StyleSheet.absoluteFillObject, backgroundColor: MAP_COLORS.canvas },
+  offlineChip: {
+    position: 'absolute',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(10,10,10,0.85)',
+    borderColor: '#FFB020',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  offlineText: { color: '#FFB020', fontSize: 10, fontWeight: '700' },
 });

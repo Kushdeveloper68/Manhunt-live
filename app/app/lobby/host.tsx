@@ -36,6 +36,7 @@ import { GamePlayer, SOCKET_EVENTS } from '@manhunt/shared';
 import { getSocket, isSocketConnected } from '../../src/services/socket';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useLobbyStore } from '../../src/stores/lobbyStore';
+import { ConnectingPanel } from '../../src/components/ConnectingPanel';
 import { colors, typography, spacing, radii } from '../../src/theme/theme';
 
 function initials(username: string): string {
@@ -198,12 +199,13 @@ export default function HostLobbyScreen() {
 
   if (!gameState) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator color={colors.accentPrimary} />
-        <Text style={[styles.labelMonoSm, { color: colors.textSecondary, marginTop: spacing.sm }]}>
-          SYNCING TACTICAL SESSION...
-        </Text>
-      </View>
+      <ConnectingPanel
+        title="SYNCING TACTICAL SESSION..."
+        onRetry={() => {
+          if (token && params.gameId) joinLobby(token, params.gameId);
+        }}
+        onBack={() => router.replace('/home')}
+      />
     );
   }
 

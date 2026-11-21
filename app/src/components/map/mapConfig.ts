@@ -3,7 +3,10 @@
  * (no uptime guarantee), so the URL can be swapped without a rebuild:
  *   EXPO_PUBLIC_MAP_STYLE_URL=https://api.maptiler.com/maps/dataviz-dark/style.json?key=YOUR_KEY
  */
-export const MAP_STYLE_URL = process.env.EXPO_PUBLIC_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/dark';
+const configured = process.env.EXPO_PUBLIC_MAP_STYLE_URL;
+// The old .env.example pointed at MapLibre's demo tiles (countries only, no streets): ignore that value.
+const usable = configured && !/demotiles\.maplibre\.org/.test(configured) ? configured : undefined;
+export const MAP_STYLE_URL = usable || 'https://tiles.openfreemap.org/styles/dark';
 
 export const MAP_COLORS = {
   zone: '#C6FF00',

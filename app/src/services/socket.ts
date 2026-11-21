@@ -10,10 +10,26 @@ import { SOCKET_EVENTS, GameStateSync } from '@manhunt/shared';
 import Constants from 'expo-constants';
 import { useConnectionStore, MAX_RECONNECT_ATTEMPTS } from '../stores/connectionStore';
 
-// Resolve server URL from Expo Constants or fall back to local dev
-const SERVER_URL: string =
-  (Constants.expoConfig?.extra?.serverUrl as string | undefined) ??
-  'http://10.0.2.2:4000'; // Android emulator default
+/**
+ * Where the game server lives. Priority:
+ *   1. EXPO_PUBLIC_SOCKET_URL
+ *   2. EXPO_PUBLIC_API_URL without its "/api" (so ONE setting is enough)
+ *   3. expo "extra.serverUrl"
+ *   4. 10.0.2.2:4000 (the Android EMULATOR's alias for your PC; a real phone can never use it)
+ */
+function resolveServerUrl(): string {
+  const explicit = process.env.EXPO_PUBLIC_SOCKET_URL;
+  if (explicit) return explicit.replace(/\/$/, '');
+  const api = process.env.EXPO_PUBLIC_API_URL;
+  if (api) return api.replace(/\/$/, '').replace(/\/api$/, '');
+  return (Constants.expoConfig?.extra?.serverUrl as string | undefined) ?? 'http://10.0.2.2:4000';
+}
+
+const SERVER_URL: string = resolveServerUrl();
+console.log(`[config] game server (socket): ${SERVER_URL}`);
+
+export const getServerUrl = (): string => SERVER_URL;
+export const isEmulatorAddress = (): boolean => SERVER_URL.includes('10.0.2.2');
 
 let socket: Socket | null = null;
 let authToken: string | null = null;
@@ -45,6 +61,7 @@ export function connectSocket(token: string): Socket {
   // Feed the "SIGNAL LOST" banner
   const conn = useConnectionStore.getState();
   socket.on('connect', () => conn.setConnected());
+  socket.on('connect_error', (err: Error) => conn.setError(err.message));
   socket.on('disconnect', (reason: string) => {
     if (reason !== 'io client disconnect') conn.setDisconnected(); // ignore our own disconnects
   });

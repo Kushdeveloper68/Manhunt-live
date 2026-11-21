@@ -25,6 +25,8 @@ Your PC only runs the **server** and **Metro** (JS bundler). The Android app its
    Check from the phone's browser: `http://192.168.1.23:4000/api/health` should answer.
 
 ## 2. App env (on the PC)
+IMPORTANT: on a real phone NEVER use 10.0.2.2 (that address only exists inside the Android emulator). After any change to `app/.env`, restart Metro with `npx expo start --dev-client --clear`, because env values are baked in when the JS is bundled. One setting is enough: if `EXPO_PUBLIC_SOCKET_URL` is missing the app uses `EXPO_PUBLIC_API_URL` without `/api`. In the app: Profile > Settings > CONNECTION > TEST checks that the server is reachable.
+
 `cp app/.env.example app/.env` and set (use YOUR IP):
 ```
 EXPO_PUBLIC_API_URL=http://192.168.1.23:4000/api

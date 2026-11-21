@@ -1,6 +1,7 @@
 import { UserProfile, GameSettings, GamePlayer, GameListItem } from '@manhunt/shared';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:4000/api';
+export const getApiUrl = (): string => API_URL;
 
 export interface GameResponse {
   _id: string;

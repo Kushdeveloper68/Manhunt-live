@@ -16,7 +16,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../src/stores/authStore';
 import { useSettingsStore } from '../src/stores/settingsStore';
-import { api } from '../src/services/api';
+import { api, getApiUrl } from '../src/services/api';
+import { getServerUrl } from '../src/services/socket';
 import { restartLocationTracking } from '../src/services/location';
 import { registerForPushNotifications, unregisterPushNotifications } from '../src/services/push';
 import { colors, typography, spacing, radii } from '../src/theme/theme';
@@ -232,7 +233,31 @@ export default function SettingsScreen() {
           <Row title="Emergency number" sub={`Dial ${EMERGENCY_NUMBER} for emergency services in India.`} last />
         </Section>
 
-        <Section index={4} title="ACCOUNT & LEGAL">
+        <Section index={4} title="CONNECTION">
+          <Row
+            title="Game server"
+            sub={`API: ${getApiUrl()}\nLive: ${getServerUrl()}`}
+            right={
+              <PillButton
+                label="TEST"
+                onPress={async () => {
+                  try {
+                    const ctrl = new AbortController();
+                    const t = setTimeout(() => ctrl.abort(), 6000);
+                    const res = await fetch(`${getApiUrl()}/health`, { signal: ctrl.signal });
+                    clearTimeout(t);
+                    Alert.alert(res.ok ? 'Server reachable' : 'Server answered with an error', `HTTP ${res.status} from ${getApiUrl()}`);
+                  } catch {
+                    Alert.alert('Cannot reach the server', `${getApiUrl()}\n\nIs the server running, and is this phone on the same WiFi as the PC?`);
+                  }
+                }}
+              />
+            }
+            last
+          />
+        </Section>
+
+        <Section index={5} title="ACCOUNT & LEGAL">
           <Row title="Terms & Safety Policy" sub="Players are solely responsible for their own safety." right={<PillButton label="READ" onPress={() => router.push('/legal/terms')} />} />
           <Row title="App version" sub={`v${Constants.expoConfig?.version ?? '1.0.0'}`} />
           <Row title="Sign out" right={<PillButton label="SIGN OUT" onPress={signOut} />} />

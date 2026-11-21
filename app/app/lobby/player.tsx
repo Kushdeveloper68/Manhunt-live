@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GamePlayer } from '@manhunt/shared';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useLobbyStore } from '../../src/stores/lobbyStore';
+import { ConnectingPanel } from '../../src/components/ConnectingPanel';
 import { colors, typography, spacing, radii } from '../../src/theme/theme';
 
 function initials(username: string): string {
@@ -118,12 +119,13 @@ export default function PlayerLobbyScreen() {
 
   if (!gameState) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator color={colors.accentPrimary} />
-        <Text style={[styles.labelMonoSm, { marginTop: spacing.sm }]}>
-          SYNCING OPERATIONS ROOM...
-        </Text>
-      </View>
+      <ConnectingPanel
+        title="SYNCING OPERATIONS ROOM..."
+        onRetry={() => {
+          if (token && (params.gameId || params.code)) joinLobby(token, params.gameId, params.code);
+        }}
+        onBack={() => router.replace('/home')}
+      />
     );
   }
 
